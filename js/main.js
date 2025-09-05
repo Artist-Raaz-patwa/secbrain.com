@@ -139,9 +139,12 @@ class SecBrainApp {
    */
   setupAuthListener() {
     if (window.AuthService) {
+      console.log('Setting up authentication listener...');
       window.AuthService.onAuthStateChanged((user) => {
+        console.log('Auth state change detected:', user ? `User: ${user.uid}` : 'No user');
         this.handleAuthStateChange(user);
       });
+      console.log('Authentication listener set up successfully');
     } else {
       // Fallback: show auth screen if AuthService is not available
       console.warn('AuthService not available, showing auth screen');
@@ -224,12 +227,15 @@ class SecBrainApp {
    * @param {Object|null} user - User object or null
    */
   handleAuthStateChange(user) {
+    console.log('Auth state changed:', user ? `User: ${user.uid}` : 'No user');
     this.currentUser = user;
     
     if (user) {
+      console.log('User authenticated, showing app...');
       this.showApp();
       this.initializeUserData();
     } else {
+      console.log('No user, showing auth screen...');
       this.showAuthScreen();
     }
   }
@@ -261,9 +267,20 @@ class SecBrainApp {
    * Show main application
    */
   showApp() {
+    console.log('Showing main app...');
     this.hideLoadingScreen();
-    this.authScreen.classList.add('hidden');
-    this.appElement.classList.remove('hidden');
+    
+    // Hide auth screen
+    if (this.authScreen) {
+      this.authScreen.classList.add('hidden');
+      console.log('Auth screen hidden');
+    }
+    
+    // Show main app
+    if (this.appElement) {
+      this.appElement.classList.remove('hidden');
+      console.log('Main app shown');
+    }
     
     // Update header with user info
     if (window.Header) {
@@ -274,6 +291,8 @@ class SecBrainApp {
     if (window.Calendar) {
       window.Calendar.refresh();
     }
+    
+    console.log('App transition complete');
   }
 
   /**
@@ -325,8 +344,27 @@ class SecBrainApp {
     if (googleSignInBtn && window.AuthService) {
       googleSignInBtn.addEventListener('click', async () => {
         try {
+          console.log('Google sign-in button clicked');
           googleSignInBtn.classList.add('auth-button--loading');
-          await window.AuthService.signInWithGoogle();
+          const user = await window.AuthService.signInWithGoogle();
+          console.log('Google sign-in successful:', user);
+          
+          // Immediate check: If user is signed in but UI hasn't changed
+          if (user && this.authScreen && !this.authScreen.classList.contains('hidden')) {
+            console.log('Immediate fallback: User signed in but UI not updated');
+            this.currentUser = user;
+            this.handleAuthStateChange(user);
+          }
+          
+          // Additional fallback: Check again after a short delay
+          setTimeout(() => {
+            const currentUser = window.AuthService.getCurrentUser();
+            if (currentUser && this.authScreen && !this.authScreen.classList.contains('hidden')) {
+              console.log('Delayed fallback: Manual UI transition after successful sign-in');
+              this.currentUser = currentUser;
+              this.handleAuthStateChange(currentUser);
+            }
+          }, 1000);
         } catch (error) {
           console.error('Google sign-in failed:', error);
           // Show error message to user with debug info
