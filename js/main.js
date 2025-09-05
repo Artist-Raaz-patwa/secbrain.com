@@ -280,10 +280,16 @@ class SecBrainApp {
       this.appElement.classList.add('hidden');
     }
     
-    // Set up Google sign-in button
-    this.setupGoogleSignIn();
-    
-    console.log('Authentication screen displayed');
+          // Set up Google sign-in button
+      this.setupGoogleSignIn();
+      
+      // Set up skip login button
+      this.setupSkipLogin();
+      
+      // Set up test button
+      this.setupTestButton();
+      
+      console.log('Authentication screen displayed');
   }
 
   /**
@@ -382,6 +388,72 @@ class SecBrainApp {
           googleSignInBtn.classList.remove('auth-button--loading');
         }
       });
+    }
+  }
+
+  /**
+   * Set up skip login button
+   */
+  setupSkipLogin() {
+    const skipLoginBtn = document.getElementById('skip-login-btn');
+    
+    console.log('Setting up skip login button...', skipLoginBtn);
+    
+    if (skipLoginBtn) {
+      console.log('Skip login button found, adding event listener');
+      skipLoginBtn.addEventListener('click', () => {
+        console.log('Skip login button clicked - continuing without authentication');
+        
+        // Create a mock user object for offline mode
+        const mockUser = {
+          uid: 'offline-user-' + Date.now(),
+          displayName: 'Offline User',
+          email: 'offline@local.app',
+          photoURL: null,
+          isAnonymous: true
+        };
+        
+        // Set the current user and transition to main app
+        this.currentUser = mockUser;
+        this.handleAuthStateChange(mockUser);
+        
+        console.log('Continuing in offline mode with mock user:', mockUser.uid);
+      });
+    } else {
+      console.error('Skip login button not found! Check HTML structure.');
+    }
+  }
+
+  /**
+   * Set up test button
+   */
+  setupTestButton() {
+    const testBtn = document.getElementById('test-skip-btn');
+    
+    console.log('Setting up test button...', testBtn);
+    
+    if (testBtn) {
+      console.log('Test button found, adding event listener');
+      testBtn.addEventListener('click', () => {
+        console.log('Test button clicked - continuing without authentication');
+        
+        // Create a mock user object for offline mode
+        const mockUser = {
+          uid: 'offline-user-' + Date.now(),
+          displayName: 'Offline User',
+          email: 'offline@local.app',
+          photoURL: null,
+          isAnonymous: true
+        };
+        
+        // Set the current user and transition to main app
+        this.currentUser = mockUser;
+        this.handleAuthStateChange(mockUser);
+        
+        console.log('Continuing in offline mode with mock user:', mockUser.uid);
+      });
+    } else {
+      console.error('Test button not found!');
     }
   }
 

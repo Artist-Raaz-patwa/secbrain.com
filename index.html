@@ -54,6 +54,11 @@
                 <p class="auth-subtitle">Professional Habit Tracking</p>
             </div>
             <div class="auth-content">
+                <!-- TEST BUTTON - Should be visible -->
+                <button id="test-skip-btn" style="background-color: #00ff00 !important; color: #000 !important; padding: 20px !important; margin: 10px 0 !important; font-size: 18px !important; font-weight: bold !important; border: 3px solid #000 !important; display: block !important; width: 100% !important;">
+                    🎯 TEST: SKIP LOGIN BUTTON 🎯
+                </button>
+                
                 <button id="google-signin-btn" class="auth-button">
                     <svg class="auth-icon" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -63,7 +68,19 @@
                     </svg>
                     Sign in with Google
                 </button>
-                <p class="auth-note">Sign in to sync your habits across all devices</p>
+                
+                <div class="auth-divider">
+                    <span class="auth-divider-text">or</span>
+                </div>
+                
+                <button id="skip-login-btn" class="auth-button auth-button--secondary" style="display: flex !important; visibility: visible !important; opacity: 1 !important; background-color: #ff6b6b !important; color: white !important; border: 3px solid #ff4757 !important; font-size: 16px !important; font-weight: bold !important; margin: 10px 0 !important; padding: 15px !important;">
+                    <svg class="auth-icon" viewBox="0 0 24 24" style="width: 24px !important; height: 24px !important; fill: white !important;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    🚀 CONTINUE WITHOUT SIGN-IN 🚀
+                </button>
+                
+                <p class="auth-note">Sign in to sync your habits across all devices, or continue offline</p>
             </div>
         </div>
     </div>

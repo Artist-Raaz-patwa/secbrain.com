@@ -119,6 +119,52 @@
   line-height: 1.5;
 }
 
+/* Auth Divider */
+.auth-divider {
+  position: relative;
+  text-align: center;
+  margin: var(--spacing-4) 0;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: var(--border-color);
+}
+
+.auth-divider-text {
+  background-color: var(--bg-secondary);
+  color: var(--text-muted);
+  padding: 0 var(--spacing-3);
+  font-size: var(--font-size-sm);
+  position: relative;
+  z-index: 1;
+}
+
+/* Secondary Auth Button */
+.auth-button--secondary {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.auth-button--secondary:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--text-secondary);
+  color: var(--text-primary);
+}
+
+.auth-button--secondary:focus {
+  outline-color: var(--text-secondary);
+}
+
 /* Loading State for Auth Button */
 .auth-button--loading {
   pointer-events: none;
