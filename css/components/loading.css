@@ -1,0 +1,354 @@
+/* SecBrain - Loading Component */
+
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-normal);
+}
+
+/* Ensure loading screen is hidden by default */
+.loading-screen {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.loading-screen:not(.hidden) {
+  opacity: 1;
+  visibility: visible;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--spacing-6);
+}
+
+.loading-text {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Loading Screen Animations */
+.loading-screen {
+  animation: loadingFadeIn var(--transition-normal) ease-out;
+}
+
+@keyframes loadingFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Loading Screen Background Pattern */
+.loading-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Responsive Loading Screen */
+@media (max-width: 768px) {
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border-width: 3px;
+    margin-bottom: var(--spacing-5);
+  }
+  
+  .loading-text {
+    font-size: var(--font-size-base);
+  }
+}
+
+@media (max-width: 480px) {
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+    margin-bottom: var(--spacing-4);
+  }
+  
+  .loading-text {
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen {
+    animation: none;
+  }
+  
+  .loading-spinner {
+    animation: none;
+    border-top-color: var(--border-color);
+  }
+  
+  .loading-text {
+    animation: none;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  .loading-spinner {
+    border-width: 5px;
+  }
+}
+
+/* Loading States for Other Components */
+.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  z-index: 1;
+}
+
+/* Button Loading State */
+.button--loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.button--loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.button--loading .button__icon {
+  opacity: 0;
+}
+
+/* Card Loading State */
+.card--loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.card--loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Skeleton Loading States */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 25%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton--text {
+  height: 1em;
+  margin-bottom: var(--spacing-2);
+}
+
+.skeleton--text:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton--title {
+  height: 1.5em;
+  width: 60%;
+  margin-bottom: var(--spacing-3);
+}
+
+.skeleton--button {
+  height: 40px;
+  width: 120px;
+  border-radius: var(--radius-lg);
+}
+
+.skeleton--avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  border-radius: inherit;
+}
+
+.loading-overlay__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--text-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Progress Loading */
+.progress-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: progress-shimmer 2s infinite;
+}
+
+@keyframes progress-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Theme-specific Loading Styles */
+.theme-dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-900) 25%,
+    var(--color-gray-800) 50%,
+    var(--color-gray-900) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.theme-light .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-100) 25%,
+    var(--color-gray-200) 50%,
+    var(--color-gray-100) 75%
+  );
+  background-size: 200% 100%;
+}
+
+.theme-dark .loading-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.theme-light .loading-overlay {
+  background-color: rgba(255, 255, 255, 0.7);
+}

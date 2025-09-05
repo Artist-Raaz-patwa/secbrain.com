@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SecBrain - Professional habit tracking app with real-time sync and brightness theme">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SecBrain">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon and Icons -->
+    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
+    <link rel="apple-touch-icon" href="assets/images/icons/icon-192x192.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK - Latest Version -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+    
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/components/header.css">
+    <link rel="stylesheet" href="css/components/calendar.css">
+    <link rel="stylesheet" href="css/components/modal.css">
+    <link rel="stylesheet" href="css/components/auth.css">
+    <link rel="stylesheet" href="css/components/loading.css">
+    <link rel="stylesheet" href="css/themes/dark-theme.css">
+    <link rel="stylesheet" href="css/themes/light-theme.css">
+    <link rel="stylesheet" href="css/responsive.css">
+    
+    <title>SecBrain - Habit Tracker</title>
+</head>
+<body class="theme-dark">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen hidden">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Loading SecBrain...</p>
+    </div>
+
+    <!-- Authentication Screen -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h1 class="auth-title">SecBrain</h1>
+                <p class="auth-subtitle">Professional Habit Tracking</p>
+            </div>
+            <div class="auth-content">
+                <button id="google-signin-btn" class="auth-button">
+                    <svg class="auth-icon" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    Sign in with Google
+                </button>
+                <p class="auth-note">Sign in to sync your habits across all devices</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="app" class="app hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header__content">
+                <div class="header__left">
+                    <h1 class="header__title">SecBrain</h1>
+                    <div class="header__sync-status" id="sync-status">
+                        <span class="sync-indicator" id="sync-indicator"></span>
+                        <span class="sync-text" id="sync-text">Synced</span>
+                    </div>
+                </div>
+                <div class="header__right">
+                    <button id="theme-toggle" class="header__button" aria-label="Toggle theme">
+                        <svg class="theme-icon" viewBox="0 0 24 24">
+                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                        </svg>
+                    </button>
+                    <button id="signout-btn" class="header__button" aria-label="Sign out">
+                        <svg class="signout-icon" viewBox="0 0 24 24">
+                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Calendar Navigation -->
+            <div class="calendar-nav">
+                <button id="prev-month" class="nav-button" aria-label="Previous month">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                </button>
+                <h2 id="current-month" class="month-title">January 2024</h2>
+                <button id="next-month" class="nav-button" aria-label="Next month">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-container">
+                <div class="calendar-grid" id="calendar-grid">
+                    <!-- Calendar days will be generated here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Habit Modal -->
+        <div id="habit-modal" class="modal hidden">
+            <div class="modal__overlay"></div>
+            <div class="modal__content">
+                <div class="modal__header">
+                    <h3 id="modal-title" class="modal__title">Habits for Today</h3>
+                    <button id="close-modal" class="modal__close" aria-label="Close modal">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal__body">
+                    <div id="modal-habits" class="habits-list">
+                        <!-- Habits will be populated here -->
+                    </div>
+                    <div class="modal__actions">
+                        <button id="add-habit-btn" class="button button--primary">
+                            <svg class="button__icon" viewBox="0 0 24 24">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                            Add Habit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Habit Form -->
+        <div id="add-habit-form" class="add-habit-form hidden">
+            <div class="form__overlay"></div>
+            <div class="form__content">
+                <div class="form__header">
+                    <h3 class="form__title">Add New Habit</h3>
+                    <button id="close-form" class="form__close" aria-label="Close form">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="form__body">
+                    <div class="form__group">
+                        <label for="habit-name" class="form__label">Habit Name</label>
+                        <input type="text" id="habit-name" class="form__input" placeholder="Enter habit name" maxlength="50">
+                    </div>
+                    <div class="form__actions">
+                        <button id="cancel-habit" class="button button--secondary">Cancel</button>
+                        <button id="save-habit" class="button button--primary">Save Habit</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/config/firebase-config.js"></script>
+    <script src="js/utils/date-utils.js"></script>
+    <script src="js/utils/storage-utils.js"></script>
+    <script src="js/utils/helpers.js"></script>
+    <script src="js/services/auth-service.js"></script>
+    <script src="js/services/database-service.js"></script>
+    <script src="js/services/sync-service.js"></script>
+    <script src="js/data/habit-manager.js"></script>
+    <script src="js/data/progress-manager.js"></script>
+    <script src="js/components/theme-manager.js"></script>
+    <script src="js/components/calendar.js"></script>
+    <script src="js/components/habit-modal.js"></script>
+    <script src="js/components/header.js"></script>
+    <script src="js/main.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

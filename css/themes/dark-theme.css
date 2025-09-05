@@ -1,0 +1,167 @@
+/* SecBrain - Dark Theme */
+/* Brightness theme logic: 0% progress = 100% black, 100% progress = 100% white */
+
+.theme-dark {
+  /* Base Colors */
+  --bg-primary: var(--color-black);
+  --bg-secondary: var(--color-gray-900);
+  --bg-tertiary: var(--color-gray-800);
+  --bg-quaternary: var(--color-gray-700);
+  
+  /* Text Colors */
+  --text-primary: var(--color-white);
+  --text-secondary: var(--color-gray-300);
+  --text-muted: var(--color-gray-500);
+  --text-inverse: var(--color-black);
+  
+  /* Border and Shadow Colors */
+  --border-color: var(--color-gray-700);
+  --border-light: var(--color-gray-600);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  
+  /* Brightness Scale for Progress Visualization */
+  --brightness-0: 0%;    /* 0% progress = 100% black */
+  --brightness-10: 10%;
+  --brightness-20: 20%;
+  --brightness-30: 30%;
+  --brightness-40: 40%;
+  --brightness-50: 50%;
+  --brightness-60: 60%;
+  --brightness-70: 70%;
+  --brightness-80: 80%;
+  --brightness-90: 90%;
+  --brightness-100: 100%; /* 100% progress = 100% white */
+  
+  /* Calendar Day Brightness Classes */
+  --day-bg-0: hsl(0, 0%, var(--brightness-0));
+  --day-bg-10: hsl(0, 0%, var(--brightness-10));
+  --day-bg-20: hsl(0, 0%, var(--brightness-20));
+  --day-bg-30: hsl(0, 0%, var(--brightness-30));
+  --day-bg-40: hsl(0, 0%, var(--brightness-40));
+  --day-bg-50: hsl(0, 0%, var(--brightness-50));
+  --day-bg-60: hsl(0, 0%, var(--brightness-60));
+  --day-bg-70: hsl(0, 0%, var(--brightness-70));
+  --day-bg-80: hsl(0, 0%, var(--brightness-80));
+  --day-bg-90: hsl(0, 0%, var(--brightness-90));
+  --day-bg-100: hsl(0, 0%, var(--brightness-100));
+  
+  /* Text Colors for Different Brightness Levels */
+  --day-text-0: var(--color-white);
+  --day-text-10: var(--color-white);
+  --day-text-20: var(--color-white);
+  --day-text-30: var(--color-white);
+  --day-text-40: var(--color-white);
+  --day-text-50: var(--color-black);
+  --day-text-60: var(--color-black);
+  --day-text-70: var(--color-black);
+  --day-text-80: var(--color-black);
+  --day-text-90: var(--color-black);
+  --day-text-100: var(--color-black);
+  
+  /* Progress Bar Colors */
+  --progress-bg: var(--color-gray-800);
+  --progress-fill: var(--color-white);
+  --progress-text: var(--color-black);
+  
+  /* Button States */
+  --button-primary-bg: var(--color-white);
+  --button-primary-text: var(--color-black);
+  --button-primary-hover: var(--color-gray-200);
+  
+  --button-secondary-bg: transparent;
+  --button-secondary-text: var(--color-white);
+  --button-secondary-border: var(--color-gray-700);
+  --button-secondary-hover: var(--color-gray-900);
+  
+  /* Input States */
+  --input-bg: var(--color-gray-900);
+  --input-border: var(--color-gray-700);
+  --input-focus-border: var(--color-white);
+  --input-placeholder: var(--color-gray-500);
+  
+  /* Modal and Overlay */
+  --modal-bg: var(--color-gray-900);
+  --modal-border: var(--color-gray-700);
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  
+  /* Status Colors */
+  --status-success: var(--color-white);
+  --status-warning: var(--color-gray-300);
+  --status-error: var(--color-gray-400);
+  --status-info: var(--color-gray-200);
+  
+  /* Sync Status Colors */
+  --sync-synced: var(--color-white);
+  --sync-syncing: var(--color-gray-300);
+  --sync-error: var(--color-gray-400);
+  --sync-offline: var(--color-gray-500);
+}
+
+/* Dark Theme Specific Styles */
+.theme-dark .calendar-day {
+  transition: all var(--transition-fast);
+}
+
+.theme-dark .calendar-day:hover {
+  border-color: var(--color-white);
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+
+.theme-dark .calendar-day--today {
+  border: 2px solid var(--color-white);
+  box-shadow: 0 0 0 1px var(--color-white);
+}
+
+.theme-dark .habit-checkbox {
+  border-color: var(--color-gray-600);
+}
+
+.theme-dark .habit-checkbox:checked {
+  background-color: var(--color-white);
+  border-color: var(--color-white);
+}
+
+.theme-dark .habit-checkbox:checked::after {
+  color: var(--color-black);
+}
+
+.theme-dark .progress-bar {
+  background-color: var(--color-gray-800);
+}
+
+.theme-dark .progress-bar__fill {
+  background-color: var(--color-white);
+}
+
+.theme-dark .modal {
+  background-color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-700);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+}
+
+.theme-dark .auth-container {
+  background-color: var(--color-gray-900);
+  border: 1px solid var(--color-gray-700);
+}
+
+.theme-dark .loading-spinner {
+  border-color: var(--color-gray-700);
+  border-top-color: var(--color-white);
+}
+
+/* Dark Theme Animation Overrides */
+.theme-dark .fade-in {
+  animation: fadeInDark var(--transition-normal) ease-in-out;
+}
+
+@keyframes fadeInDark {
+  from { 
+    opacity: 0; 
+    background-color: var(--color-black);
+  }
+  to { 
+    opacity: 1; 
+    background-color: var(--bg-secondary);
+  }
+}
