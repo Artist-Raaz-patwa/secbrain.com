@@ -60,6 +60,9 @@ class SecBrainApp {
       // Set up authentication listener
       this.setupAuthListener();
       
+      // Handle redirect result if user was redirected back from Google
+      await this.handleRedirectResult();
+      
       // Set up application listeners
       this.setupAppListeners();
       
@@ -132,6 +135,26 @@ class SecBrainApp {
     
     console.warn('Some services failed to initialize within timeout, proceeding with available services');
     // Don't throw error, just proceed with what we have
+  }
+
+  /**
+   * Handle redirect result after Google sign-in
+   */
+  async handleRedirectResult() {
+    if (window.AuthService) {
+      try {
+        const user = await window.AuthService.handleRedirectResult();
+        if (user) {
+          console.log('Redirect sign-in detected, user:', user.uid);
+          // The auth state change listener should handle the UI transition
+          // But we can also trigger it manually to be sure
+          this.currentUser = user;
+          this.handleAuthStateChange(user);
+        }
+      } catch (error) {
+        console.error('Failed to handle redirect result:', error);
+      }
+    }
   }
 
   /**
@@ -346,25 +369,11 @@ class SecBrainApp {
         try {
           console.log('Google sign-in button clicked');
           googleSignInBtn.classList.add('auth-button--loading');
-          const user = await window.AuthService.signInWithGoogle();
-          console.log('Google sign-in successful:', user);
           
-          // Immediate check: If user is signed in but UI hasn't changed
-          if (user && this.authScreen && !this.authScreen.classList.contains('hidden')) {
-            console.log('Immediate fallback: User signed in but UI not updated');
-            this.currentUser = user;
-            this.handleAuthStateChange(user);
-          }
-          
-          // Additional fallback: Check again after a short delay
-          setTimeout(() => {
-            const currentUser = window.AuthService.getCurrentUser();
-            if (currentUser && this.authScreen && !this.authScreen.classList.contains('hidden')) {
-              console.log('Delayed fallback: Manual UI transition after successful sign-in');
-              this.currentUser = currentUser;
-              this.handleAuthStateChange(currentUser);
-            }
-          }, 1000);
+          // Use redirect method instead of popup for better UX
+          // This will redirect to Google, then redirect back to the app
+          await window.AuthService.signInWithGoogleRedirect();
+          // Note: The page will redirect, so code after this won't execute
         } catch (error) {
           console.error('Google sign-in failed:', error);
           // Show error message to user with debug info

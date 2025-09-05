@@ -54,7 +54,7 @@ class AuthService {
   }
 
   /**
-   * Sign in with Google
+   * Sign in with Google using popup
    * @returns {Promise<Object>} User object
    */
   async signInWithGoogle() {
@@ -76,7 +76,7 @@ class AuthService {
       provider.addScope('profile');
       provider.addScope('email');
       
-      // Set custom parameters
+      // Set custom parameters for better UX
       provider.setCustomParameters({
         prompt: 'select_account'
       });
@@ -90,10 +90,81 @@ class AuthService {
         email: user.email,
         displayName: user.displayName
       });
+      
+      // Ensure popup closes immediately after successful authentication
+      if (result.credential) {
+        console.log('Authentication completed, popup should close automatically');
+      }
+      
       return user;
     } catch (error) {
       console.error('Google sign-in failed:', error);
       throw this.handleAuthError(error);
+    }
+  }
+
+  /**
+   * Sign in with Google using redirect (alternative to popup)
+   * This method will redirect the entire page and then redirect back
+   * @returns {Promise<void>}
+   */
+  async signInWithGoogleRedirect() {
+    if (!this.auth) {
+      throw new Error('Authentication service not initialized');
+    }
+
+    // Check if we're in a supported environment
+    const protocol = window.location.protocol;
+    if (protocol === 'file:') {
+      throw new Error('Firebase requires HTTP/HTTPS protocol. Please run the app using a local server. Double-click start-server.bat or run: npx http-server -p 8000 -o');
+    }
+
+    try {
+      console.log('Starting Google sign-in with redirect...');
+      const provider = new firebase.auth.GoogleAuthProvider();
+      
+      // Add scopes
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      // Set custom parameters
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+
+      console.log('Redirecting to Google sign-in...');
+      await this.auth.signInWithRedirect(provider);
+      // Note: This will redirect the page, so the code after this won't execute
+    } catch (error) {
+      console.error('Google sign-in redirect failed:', error);
+      throw this.handleAuthError(error);
+    }
+  }
+
+  /**
+   * Handle redirect result after Google sign-in
+   * Call this method when the page loads to check if user was redirected back
+   * @returns {Promise<Object|null>} User object or null
+   */
+  async handleRedirectResult() {
+    if (!this.auth) {
+      return null;
+    }
+
+    try {
+      const result = await this.auth.getRedirectResult();
+      if (result.user) {
+        console.log('Redirect sign-in successful:', {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName
+        });
+        return result.user;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to handle redirect result:', error);
+      return null;
     }
   }
 
