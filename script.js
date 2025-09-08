@@ -622,6 +622,20 @@ class SecondBrain {
             }, 100);
         }
 
+        // Initialize Notes if we're starting on the Notes module
+        if (this.currentModule === 'notes') {
+            setTimeout(async () => {
+                await this.initializeNotes();
+            }, 100);
+        }
+
+        // Initialize Tasks if we're starting on the Tasks module
+        if (this.currentModule === 'tasks') {
+            setTimeout(async () => {
+                await this.initializeTasks();
+            }, 100);
+        }
+
         // Initialize Goals if we're starting on the Goals module
         if (this.currentModule === 'goals') {
             setTimeout(async () => {
@@ -848,6 +862,20 @@ class SecondBrain {
             }, 100);
         }
 
+        // Initialize Notes if switching to Notes module
+        if (moduleName === 'notes') {
+            setTimeout(async () => {
+                await this.initializeNotes();
+            }, 100);
+        }
+
+        // Initialize Tasks if switching to Tasks module
+        if (moduleName === 'tasks') {
+            setTimeout(async () => {
+                await this.initializeTasks();
+            }, 100);
+        }
+
         // Initialize Goals if switching to Goals module
         if (moduleName === 'goals') {
             setTimeout(async () => {
@@ -1049,29 +1077,39 @@ class SecondBrain {
 
     getNotesContent() {
         return `
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Create New Note</h3>
-                    <div class="action-buttons">
-                        <button class="btn btn-primary">+ New Note</button>
+            <div class="notes-container">
+                <div class="notes-header">
+                    <h2>My Notes</h2>
+                    <button class="btn btn-primary" id="addNoteBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Note
+                    </button>
+                </div>
+                
+                <div class="notes-stats" id="notesStats">
+                    <div class="notes-stat-card">
+                        <span class="notes-stat-number" id="totalNotes">0</span>
+                        <span class="notes-stat-label">Total Notes</span>
+                    </div>
+                    <div class="notes-stat-card">
+                        <span class="notes-stat-number" id="recentNotes">0</span>
+                        <span class="notes-stat-label">This Week</span>
                     </div>
                 </div>
                 
-                <div class="dashboard-card">
-                    <h3>Recent Notes</h3>
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14,2 14,8 20,8"></polyline>
-                                </svg>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-text">No notes yet</p>
-                                <span class="activity-time">Create your first note</span>
-                            </div>
+                <div class="notes-list" id="notesList">
+                    <div class="empty-state" id="notesEmptyState">
+                        <div class="empty-state-icon">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14,2 14,8 20,8"></polyline>
+                            </svg>
                         </div>
+                        <h3>No Notes Yet</h3>
+                        <p>Create your first note to get started!</p>
                     </div>
                 </div>
             </div>
@@ -1080,29 +1118,58 @@ class SecondBrain {
 
     getTasksContent() {
         return `
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Add New Task</h3>
-                    <div class="action-buttons">
-                        <button class="btn btn-primary">+ New Task</button>
+            <div class="tasks-container">
+                <div class="tasks-header">
+                    <h2>My Tasks</h2>
+                    <button class="btn btn-primary" id="addTaskBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Task
+                    </button>
+                </div>
+                
+                <div class="tasks-stats" id="tasksStats">
+                    <div class="tasks-stat-card">
+                        <span class="tasks-stat-number" id="totalTasks">0</span>
+                        <span class="tasks-stat-label">Total Tasks</span>
+                    </div>
+                    <div class="tasks-stat-card">
+                        <span class="tasks-stat-number" id="completedTasks">0</span>
+                        <span class="tasks-stat-label">Completed</span>
+                    </div>
+                    <div class="tasks-stat-card">
+                        <span class="tasks-stat-number" id="pendingTasks">0</span>
+                        <span class="tasks-stat-label">Pending</span>
                     </div>
                 </div>
                 
-                <div class="dashboard-card">
-                    <h3>Task List</h3>
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M9 11l3 3l8-8"></path>
-                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-                                </svg>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-text">No tasks yet</p>
-                                <span class="activity-time">Create your first task</span>
-                            </div>
+                <div class="tasks-filters">
+                    <div class="filter-group">
+                        <label for="taskFilter">Filter:</label>
+                        <select id="taskFilter" class="filter-select">
+                            <option value="all">All Tasks</option>
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="searchTasks">Search:</label>
+                        <input type="text" id="searchTasks" class="filter-input" placeholder="Search tasks...">
+                    </div>
+                </div>
+                
+                <div class="tasks-list" id="tasksList">
+                    <div class="empty-state" id="tasksEmptyState">
+                        <div class="empty-state-icon">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <path d="M9 11l3 3l8-8"></path>
+                                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                            </svg>
                         </div>
+                        <h3>No Tasks Yet</h3>
+                        <p>Create your first task to get started!</p>
                     </div>
                 </div>
             </div>
@@ -1924,6 +1991,36 @@ class SecondBrain {
                 console.log('⚠️ Wallet manager not initialized');
             }
 
+            // Save Notes data to Google Firebase
+            if (this.notes) {
+                try {
+                    console.log('🔄 Saving Notes data to Firebase...');
+                    await this.notes.saveNotes();
+                    savedItems.push('Notes');
+                    console.log('✅ Notes data saved to Google Firebase successfully');
+                } catch (error) {
+                    errors.push(`Notes: ${error.message}`);
+                    console.error('❌ Notes save error:', error);
+                }
+            } else {
+                console.log('⚠️ Notes manager not initialized');
+            }
+
+            // Save Tasks data to Google Firebase
+            if (this.tasks) {
+                try {
+                    console.log('🔄 Saving Tasks data to Firebase...');
+                    await this.tasks.saveTasks();
+                    savedItems.push('Tasks');
+                    console.log('✅ Tasks data saved to Google Firebase successfully');
+                } catch (error) {
+                    errors.push(`Tasks: ${error.message}`);
+                    console.error('❌ Tasks save error:', error);
+                }
+            } else {
+                console.log('⚠️ Tasks manager not initialized');
+            }
+
             // Save Goals data to Google Firebase
             try {
                 console.log('🔄 Saving Goals data to Firebase...');
@@ -2547,6 +2644,8 @@ class SecondBrain {
             this.completedTasks = null;
             this.calendar = null;
             this.habitTracker = null;
+            this.notes = null;
+            this.tasks = null;
             
             // Reinitialize modules based on current module
             if (this.currentModule === 'crm') {
@@ -2561,6 +2660,10 @@ class SecondBrain {
                 await this.initializeHabits();
             } else if (this.currentModule === 'wallet') {
                 await this.initializeWallet();
+            } else if (this.currentModule === 'notes') {
+                await this.initializeNotes();
+            } else if (this.currentModule === 'tasks') {
+                await this.initializeTasks();
             } else if (this.currentModule === 'goals') {
                 await initializeGoals();
             }
@@ -2795,6 +2898,62 @@ class SecondBrain {
         if (addTransactionBtn) {
             addTransactionBtn.addEventListener('click', () => {
                 this.wallet.showAddTransactionModal();
+            });
+        }
+    }
+
+    // Notes Methods
+    async initializeNotes() {
+        console.log('🔄 Initializing Notes module...');
+        this.notes = new NotesManager(this.firebase);
+        await this.notes.loadNotes();
+        this.notes.renderNotes();
+        this.notes.updateStats();
+        this.setupNotesEventListeners();
+        console.log('✅ Notes module initialized successfully');
+    }
+
+    setupNotesEventListeners() {
+        const addNoteBtn = document.getElementById('addNoteBtn');
+
+        if (addNoteBtn) {
+            addNoteBtn.addEventListener('click', () => {
+                this.notes.showAddNoteModal();
+            });
+        }
+    }
+
+    // Tasks Methods
+    async initializeTasks() {
+        console.log('🔄 Initializing Tasks module...');
+        this.tasks = new TasksManager(this.firebase);
+        await this.tasks.loadTasks();
+        this.tasks.renderTasks();
+        this.tasks.updateStats();
+        this.setupTasksEventListeners();
+        console.log('✅ Tasks module initialized successfully');
+    }
+
+    setupTasksEventListeners() {
+        const addTaskBtn = document.getElementById('addTaskBtn');
+        const taskFilter = document.getElementById('taskFilter');
+        const searchTasks = document.getElementById('searchTasks');
+
+        if (addTaskBtn) {
+            addTaskBtn.addEventListener('click', () => {
+                this.tasks.showAddTaskModal();
+            });
+        }
+
+        if (taskFilter) {
+            taskFilter.addEventListener('change', () => {
+                this.tasks.filterTasks();
+            });
+        }
+
+        if (searchTasks) {
+            searchTasks.addEventListener('input', () => {
+                this.tasks.searchTasks();
             });
         }
     }
@@ -3385,6 +3544,716 @@ class CompletedTasksManager {
     }
 }
 
+// Notes Manager Class
+class NotesManager {
+    constructor(firebaseService) {
+        this.firebase = firebaseService;
+        this.notes = [];
+        this.nextNoteId = 1;
+    }
+
+    // Note Management
+    async addNote(title, content) {
+        const note = {
+            id: this.nextNoteId++,
+            title: title.trim(),
+            content: content.trim(),
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        this.notes.push(note);
+        await this.saveNotes();
+        this.renderNotes();
+        this.updateStats();
+        return note;
+    }
+
+    async editNote(id, title, content) {
+        const note = this.notes.find(n => n.id === id);
+        if (note) {
+            note.title = title.trim();
+            note.content = content.trim();
+            note.updatedAt = new Date().toISOString();
+            
+            await this.saveNotes();
+            this.renderNotes();
+            this.updateStats();
+        }
+    }
+
+    async deleteNote(id) {
+        try {
+            // Delete from Firebase first
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteDocument('notes', id.toString());
+                console.log('🗑️ Note deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            this.notes = this.notes.filter(n => n.id !== id);
+            
+            // Save the updated notes list
+            await this.saveNotes();
+            this.renderNotes();
+            this.updateStats();
+            
+            console.log('✅ Note deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting note:', error);
+            // Still remove from local array even if Firebase delete fails
+            this.notes = this.notes.filter(n => n.id !== id);
+            await this.saveNotes();
+            this.renderNotes();
+            this.updateStats();
+        }
+    }
+
+    // Data Persistence
+    async saveNotes() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each note to Firebase
+                for (const note of this.notes) {
+                    note.userId = this.firebase.userId;
+                    note.updatedAt = new Date().toISOString();
+                    await this.firebase.setDocument('notes', note.id.toString(), note);
+                }
+                
+                // Save counter
+                await this.firebase.setDocument('notes_counters', 'counters', {
+                    userId: this.firebase.userId,
+                    nextNoteId: this.nextNoteId,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('📝 Notes saved to Firebase:', this.notes.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem('notes', JSON.stringify(this.notes));
+                localStorage.setItem('notes_next_id', this.nextNoteId.toString());
+                console.log('📝 Notes saved to local storage:', this.notes.length);
+            }
+            
+            // Always save to local storage as backup
+            localStorage.setItem('notes', JSON.stringify(this.notes));
+            localStorage.setItem('notes_next_id', this.nextNoteId.toString());
+        } catch (error) {
+            console.error('Error saving notes:', error);
+            // Fallback to local storage
+            localStorage.setItem('notes', JSON.stringify(this.notes));
+            localStorage.setItem('notes_next_id', this.nextNoteId.toString());
+        }
+    }
+
+    async loadNotes() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Load notes from Firebase
+                const firebaseNotes = await this.firebase.getCollection('notes');
+                if (firebaseNotes && firebaseNotes.length > 0) {
+                    // Filter notes by current user
+                    this.notes = firebaseNotes.filter(note => note.userId === this.firebase.userId);
+                    
+                    // Load counter
+                    const counter = await this.firebase.getDocument('notes_counters', 'counters');
+                    if (counter && counter.userId === this.firebase.userId) {
+                        this.nextNoteId = counter.nextNoteId || 1;
+                    } else {
+                        // Calculate next ID from existing notes
+                        this.nextNoteId = Math.max(...this.notes.map(n => n.id), 0) + 1;
+                    }
+                    console.log('📝 Notes loaded from Firebase:', this.notes.length);
+                } else {
+                    // No Firebase data, try local storage
+                    this.loadFromLocalStorage();
+                }
+            } else {
+                // Firebase not initialized, use local storage
+                this.loadFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Error loading notes:', error);
+            // Fallback to local storage
+            this.loadFromLocalStorage();
+        }
+    }
+
+    loadFromLocalStorage() {
+        const savedNotes = localStorage.getItem('notes');
+        const savedNextId = localStorage.getItem('notes_next_id');
+
+        if (savedNotes) {
+            this.notes = JSON.parse(savedNotes);
+        }
+        if (savedNextId) {
+            this.nextNoteId = parseInt(savedNextId);
+        }
+        console.log('📝 Notes loaded from local storage:', this.notes.length);
+    }
+
+    // UI Methods
+    renderNotes() {
+        const notesList = document.getElementById('notesList');
+        const emptyState = document.getElementById('notesEmptyState');
+        
+        if (!notesList) return;
+
+        if (this.notes.length === 0) {
+            notesList.innerHTML = '';
+            if (emptyState) {
+                notesList.appendChild(emptyState);
+            }
+            return;
+        }
+
+        // Sort notes by updated date (newest first)
+        const sortedNotes = [...this.notes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+        const notesHTML = sortedNotes.map(note => `
+            <div class="note-item" data-note-id="${note.id}">
+                <div class="note-header">
+                    <h3 class="note-title">${note.title}</h3>
+                    <div class="note-actions">
+                        <button class="note-action-btn" onclick="window.secondBrain.notes.showEditNoteModal(${note.id})" title="Edit Note">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="note-action-btn" onclick="window.secondBrain.notes.deleteNote(${note.id}).catch(console.error)" title="Delete Note">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="note-content">${note.content}</div>
+                <div class="note-meta">
+                    <span class="note-date">${new Date(note.updatedAt).toLocaleDateString()}</span>
+                </div>
+            </div>
+        `).join('');
+
+        notesList.innerHTML = notesHTML;
+    }
+
+    updateStats() {
+        const totalNotesEl = document.getElementById('totalNotes');
+        const recentNotesEl = document.getElementById('recentNotes');
+
+        if (totalNotesEl) {
+            totalNotesEl.textContent = this.notes.length;
+        }
+
+        if (recentNotesEl) {
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const recentCount = this.notes.filter(note => new Date(note.createdAt) > oneWeekAgo).length;
+            recentNotesEl.textContent = recentCount;
+        }
+    }
+
+    showAddNoteModal() {
+        this.createModal('Add New Note', this.getAddNoteModalContent(), async (formData) => {
+            await this.addNote(formData.title, formData.content);
+        });
+    }
+
+    showEditNoteModal(noteId) {
+        const note = this.notes.find(n => n.id === noteId);
+        if (!note) return;
+
+        this.createModal('Edit Note', this.getEditNoteModalContent(note), async (formData) => {
+            await this.editNote(noteId, formData.title, formData.content);
+        });
+    }
+
+    getAddNoteModalContent() {
+        return `
+            <form id="noteForm">
+                <div class="form-group">
+                    <label class="form-label" for="noteTitle">Title *</label>
+                    <input type="text" id="noteTitle" name="title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="noteContent">Content *</label>
+                    <textarea id="noteContent" name="content" class="form-textarea" rows="6" required></textarea>
+                </div>
+            </form>
+        `;
+    }
+
+    getEditNoteModalContent(note) {
+        return `
+            <form id="noteForm">
+                <div class="form-group">
+                    <label class="form-label" for="noteTitle">Title *</label>
+                    <input type="text" id="noteTitle" name="title" class="form-input" value="${note.title}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="noteContent">Content *</label>
+                    <textarea id="noteContent" name="content" class="form-textarea" rows="6" required>${note.content}</textarea>
+                </div>
+            </form>
+        `;
+    }
+
+    createModal(title, content, onSubmit) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">${title}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                    <button class="btn btn-primary" id="submitNoteBtn">Save</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const submitBtn = modal.querySelector('#submitNoteBtn');
+        submitBtn.addEventListener('click', async () => {
+            const form = modal.querySelector('#noteForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            if (data.title.trim() && data.content.trim()) {
+                await onSubmit(data);
+                modal.remove();
+            }
+        });
+
+        // Focus on title input
+        const titleInput = modal.querySelector('#noteTitle');
+        if (titleInput) {
+            titleInput.focus();
+        }
+    }
+}
+
+// Tasks Manager Class
+class TasksManager {
+    constructor(firebaseService) {
+        this.firebase = firebaseService;
+        this.tasks = [];
+        this.nextTaskId = 1;
+        this.currentFilter = 'all';
+        this.searchTerm = '';
+    }
+
+    // Task Management
+    async addTask(title, description, priority = 'medium', dueDate = null) {
+        const task = {
+            id: this.nextTaskId++,
+            title: title.trim(),
+            description: description.trim(),
+            priority: priority,
+            dueDate: dueDate,
+            completed: false,
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        this.tasks.push(task);
+        await this.saveTasks();
+        this.renderTasks();
+        this.updateStats();
+        return task;
+    }
+
+    async editTask(id, title, description, priority, dueDate) {
+        const task = this.tasks.find(t => t.id === id);
+        if (task) {
+            task.title = title.trim();
+            task.description = description.trim();
+            task.priority = priority;
+            task.dueDate = dueDate;
+            task.updatedAt = new Date().toISOString();
+            
+            await this.saveTasks();
+            this.renderTasks();
+            this.updateStats();
+        }
+    }
+
+    async toggleTask(id) {
+        const task = this.tasks.find(t => t.id === id);
+        if (task) {
+            task.completed = !task.completed;
+            task.updatedAt = new Date().toISOString();
+            
+            await this.saveTasks();
+            this.renderTasks();
+            this.updateStats();
+        }
+    }
+
+    async deleteTask(id) {
+        try {
+            // Delete from Firebase first
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteDocument('tasks', id.toString());
+                console.log('🗑️ Task deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            this.tasks = this.tasks.filter(t => t.id !== id);
+            
+            // Save the updated tasks list
+            await this.saveTasks();
+            this.renderTasks();
+            this.updateStats();
+            
+            console.log('✅ Task deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting task:', error);
+            // Still remove from local array even if Firebase delete fails
+            this.tasks = this.tasks.filter(t => t.id !== id);
+            await this.saveTasks();
+            this.renderTasks();
+            this.updateStats();
+        }
+    }
+
+    // Data Persistence
+    async saveTasks() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each task to Firebase
+                for (const task of this.tasks) {
+                    task.userId = this.firebase.userId;
+                    task.updatedAt = new Date().toISOString();
+                    await this.firebase.setDocument('tasks', task.id.toString(), task);
+                }
+                
+                // Save counter
+                await this.firebase.setDocument('tasks_counters', 'counters', {
+                    userId: this.firebase.userId,
+                    nextTaskId: this.nextTaskId,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('✅ Tasks saved to Firebase:', this.tasks.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem('tasks', JSON.stringify(this.tasks));
+                localStorage.setItem('tasks_next_id', this.nextTaskId.toString());
+                console.log('✅ Tasks saved to local storage:', this.tasks.length);
+            }
+            
+            // Always save to local storage as backup
+            localStorage.setItem('tasks', JSON.stringify(this.tasks));
+            localStorage.setItem('tasks_next_id', this.nextTaskId.toString());
+        } catch (error) {
+            console.error('Error saving tasks:', error);
+            // Fallback to local storage
+            localStorage.setItem('tasks', JSON.stringify(this.tasks));
+            localStorage.setItem('tasks_next_id', this.nextTaskId.toString());
+        }
+    }
+
+    async loadTasks() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Load tasks from Firebase
+                const firebaseTasks = await this.firebase.getCollection('tasks');
+                if (firebaseTasks && firebaseTasks.length > 0) {
+                    // Filter tasks by current user
+                    this.tasks = firebaseTasks.filter(task => task.userId === this.firebase.userId);
+                    
+                    // Load counter
+                    const counter = await this.firebase.getDocument('tasks_counters', 'counters');
+                    if (counter && counter.userId === this.firebase.userId) {
+                        this.nextTaskId = counter.nextTaskId || 1;
+                    } else {
+                        // Calculate next ID from existing tasks
+                        this.nextTaskId = Math.max(...this.tasks.map(t => t.id), 0) + 1;
+                    }
+                    console.log('✅ Tasks loaded from Firebase:', this.tasks.length);
+                } else {
+                    // No Firebase data, try local storage
+                    this.loadFromLocalStorage();
+                }
+            } else {
+                // Firebase not initialized, use local storage
+                this.loadFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Error loading tasks:', error);
+            // Fallback to local storage
+            this.loadFromLocalStorage();
+        }
+    }
+
+    loadFromLocalStorage() {
+        const savedTasks = localStorage.getItem('tasks');
+        const savedNextId = localStorage.getItem('tasks_next_id');
+
+        if (savedTasks) {
+            this.tasks = JSON.parse(savedTasks);
+        }
+        if (savedNextId) {
+            this.nextTaskId = parseInt(savedNextId);
+        }
+        console.log('✅ Tasks loaded from local storage:', this.tasks.length);
+    }
+
+    // UI Methods
+    renderTasks() {
+        const tasksList = document.getElementById('tasksList');
+        const emptyState = document.getElementById('tasksEmptyState');
+        
+        if (!tasksList) return;
+
+        let filteredTasks = this.getFilteredTasks();
+
+        if (filteredTasks.length === 0) {
+            tasksList.innerHTML = '';
+            if (emptyState) {
+                tasksList.appendChild(emptyState);
+            }
+            return;
+        }
+
+        // Sort tasks: pending first, then by priority, then by due date
+        filteredTasks.sort((a, b) => {
+            if (a.completed !== b.completed) {
+                return a.completed ? 1 : -1;
+            }
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+                return priorityOrder[b.priority] - priorityOrder[a.priority];
+            }
+            if (a.dueDate && b.dueDate) {
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            }
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+        });
+
+        const tasksHTML = filteredTasks.map(task => `
+            <div class="task-item ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
+                <div class="task-header">
+                    <div class="task-checkbox">
+                        <input type="checkbox" ${task.completed ? 'checked' : ''} 
+                               onchange="window.secondBrain.tasks.toggleTask(${task.id}).catch(console.error)">
+                    </div>
+                    <div class="task-content">
+                        <h3 class="task-title">${task.title}</h3>
+                        <p class="task-description">${task.description}</p>
+                    </div>
+                    <div class="task-actions">
+                        <span class="task-priority priority-${task.priority}">${task.priority}</span>
+                        <button class="task-action-btn" onclick="window.secondBrain.tasks.showEditTaskModal(${task.id})" title="Edit Task">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="task-action-btn" onclick="window.secondBrain.tasks.deleteTask(${task.id}).catch(console.error)" title="Delete Task">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                ${task.dueDate ? `<div class="task-due-date">Due: ${new Date(task.dueDate).toLocaleDateString()}</div>` : ''}
+            </div>
+        `).join('');
+
+        tasksList.innerHTML = tasksHTML;
+    }
+
+    getFilteredTasks() {
+        let filtered = this.tasks;
+
+        // Apply filter
+        if (this.currentFilter === 'pending') {
+            filtered = filtered.filter(task => !task.completed);
+        } else if (this.currentFilter === 'completed') {
+            filtered = filtered.filter(task => task.completed);
+        }
+
+        // Apply search
+        if (this.searchTerm) {
+            const term = this.searchTerm.toLowerCase();
+            filtered = filtered.filter(task => 
+                task.title.toLowerCase().includes(term) || 
+                task.description.toLowerCase().includes(term)
+            );
+        }
+
+        return filtered;
+    }
+
+    filterTasks() {
+        const filterSelect = document.getElementById('taskFilter');
+        if (filterSelect) {
+            this.currentFilter = filterSelect.value;
+            this.renderTasks();
+        }
+    }
+
+    searchTasks() {
+        const searchInput = document.getElementById('searchTasks');
+        if (searchInput) {
+            this.searchTerm = searchInput.value;
+            this.renderTasks();
+        }
+    }
+
+    updateStats() {
+        const totalTasksEl = document.getElementById('totalTasks');
+        const completedTasksEl = document.getElementById('completedTasks');
+        const pendingTasksEl = document.getElementById('pendingTasks');
+
+        if (totalTasksEl) {
+            totalTasksEl.textContent = this.tasks.length;
+        }
+
+        if (completedTasksEl) {
+            const completedCount = this.tasks.filter(task => task.completed).length;
+            completedTasksEl.textContent = completedCount;
+        }
+
+        if (pendingTasksEl) {
+            const pendingCount = this.tasks.filter(task => !task.completed).length;
+            pendingTasksEl.textContent = pendingCount;
+        }
+    }
+
+    showAddTaskModal() {
+        this.createModal('Add New Task', this.getAddTaskModalContent(), async (formData) => {
+            await this.addTask(formData.title, formData.description, formData.priority, formData.dueDate || null);
+        });
+    }
+
+    showEditTaskModal(taskId) {
+        const task = this.tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        this.createModal('Edit Task', this.getEditTaskModalContent(task), async (formData) => {
+            await this.editTask(taskId, formData.title, formData.description, formData.priority, formData.dueDate || null);
+        });
+    }
+
+    getAddTaskModalContent() {
+        return `
+            <form id="taskForm">
+                <div class="form-group">
+                    <label class="form-label" for="taskTitle">Title *</label>
+                    <input type="text" id="taskTitle" name="title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskDescription">Description</label>
+                    <textarea id="taskDescription" name="description" class="form-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskPriority">Priority</label>
+                    <select id="taskPriority" name="priority" class="form-input">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskDueDate">Due Date</label>
+                    <input type="date" id="taskDueDate" name="dueDate" class="form-input">
+                </div>
+            </form>
+        `;
+    }
+
+    getEditTaskModalContent(task) {
+        return `
+            <form id="taskForm">
+                <div class="form-group">
+                    <label class="form-label" for="taskTitle">Title *</label>
+                    <input type="text" id="taskTitle" name="title" class="form-input" value="${task.title}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskDescription">Description</label>
+                    <textarea id="taskDescription" name="description" class="form-textarea" rows="3">${task.description}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskPriority">Priority</label>
+                    <select id="taskPriority" name="priority" class="form-input">
+                        <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+                        <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                        <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="taskDueDate">Due Date</label>
+                    <input type="date" id="taskDueDate" name="dueDate" class="form-input" value="${task.dueDate || ''}">
+                </div>
+            </form>
+        `;
+    }
+
+    createModal(title, content, onSubmit) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">${title}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ${content}
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                    <button class="btn btn-primary" id="submitTaskBtn">Save</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const submitBtn = modal.querySelector('#submitTaskBtn');
+        submitBtn.addEventListener('click', async () => {
+            const form = modal.querySelector('#taskForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            if (data.title.trim()) {
+                await onSubmit(data);
+                modal.remove();
+            }
+        });
+
+        // Focus on title input
+        const titleInput = modal.querySelector('#taskTitle');
+        if (titleInput) {
+            titleInput.focus();
+        }
+    }
+}
+
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.secondBrain = new SecondBrain();
@@ -3514,15 +4383,15 @@ function displayGoals() {
                     <h3>${goal.name}</h3>
                     <p><strong>Target:</strong> ₹${goal.target.toLocaleString('en-IN')}</p>
                     <p><strong>Current:</strong> ₹${goal.current.toLocaleString('en-IN')}</p>
-                    <p><strong>Time Left:</strong> <span style="color: ${countdown.days < 30 ? '#f44336' : '#4CAF50'}">${countdown.text}</span></p>
+                    <p><strong>Time Left:</strong> <span style="color: #000000">${countdown.text}</span></p>
                     <div style="background: #f0f0f0; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0;">
-                        <div style="background: #4CAF50; height: 100%; width: ${Math.min(progress, 100)}%; transition: width 0.3s;"></div>
+                        <div style="background: #000000; height: 100%; width: ${Math.min(progress, 100)}%; transition: width 0.3s;"></div>
                     </div>
                     <p><strong>Progress:</strong> ${Math.round(progress)}%</p>
                     <div style="margin-top: 10px;">
                         <button onclick="updateGoal(${goal.id})" style="margin-right: 10px; padding: 5px 10px;">Update Amount</button>
-                        <button onclick="addImage(${goal.id})" style="margin-right: 10px; padding: 5px 10px; background: #2196F3; color: white;">Add Image</button>
-                        <button onclick="deleteGoal(${goal.id})" style="background: #f44336; color: white; padding: 5px 10px;">Delete</button>
+                        <button onclick="addImage(${goal.id})" style="margin-right: 10px; padding: 5px 10px; background: #000000; color: white;">Add Image</button>
+                        <button onclick="deleteGoal(${goal.id})" style="background: #000000; color: white; padding: 5px 10px;">Delete</button>
                     </div>
                 </div>
             </div>
@@ -3884,7 +4753,7 @@ function showNotification(message, type = 'success') {
     notification.style.cssText = `
         position: fixed; top: 20px; right: 20px; z-index: 10000;
         padding: 15px 20px; border-radius: 5px; color: white;
-        background: ${type === 'error' ? '#f44336' : type === 'warning' ? '#ff9800' : '#4CAF50'};
+        background: #000000;
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     `;
     
