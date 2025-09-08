@@ -3,223 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SecBrain - Professional habit tracking app with real-time sync and brightness theme">
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="SecBrain">
+    <title>Second Brain</title>
+    <link rel="stylesheet" href="styles.css">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Favicon and Icons -->
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
-    <link rel="apple-touch-icon" href="assets/images/icons/icon-192x192.png">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Firebase SDK - Latest Version -->
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-    
-    <!-- CSS Files -->
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/components/header.css">
-    <link rel="stylesheet" href="css/components/calendar.css">
-    <link rel="stylesheet" href="css/components/modal.css">
-    <link rel="stylesheet" href="css/components/auth.css">
-    <link rel="stylesheet" href="css/components/loading.css">
-    <link rel="stylesheet" href="css/themes/dark-theme.css">
-    <link rel="stylesheet" href="css/themes/light-theme.css">
-    <link rel="stylesheet" href="css/responsive.css">
-    
-    <title>SecBrain - Habit Tracker</title>
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyYqoNx8b3RX6CbEBGoHZl49CCcQZifXQ",
+            authDomain: "secbrain-21463.firebaseapp.com",
+            projectId: "secbrain-21463",
+            storageBucket: "secbrain-21463.firebasestorage.app",
+            messagingSenderId: "691316416239",
+            appId: "1:691316416239:web:8a9d18fb2b3fb1ce08451a",
+            measurementId: "G-WQDYEJZF2Y"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const analytics = getAnalytics(app);
+        
+        // Make Firebase available globally
+        window.firebase = { app, db, auth, analytics };
+        
+        // For development - uncomment these lines to use Firebase emulators
+        // connectFirestoreEmulator(db, 'localhost', 8080);
+        // connectAuthEmulator(auth, 'http://localhost:9099');
+    </script>
 </head>
-<body class="theme-dark">
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="loading-screen hidden">
-        <div class="loading-spinner"></div>
-        <p class="loading-text">Loading SecBrain...</p>
-    </div>
-
-    <!-- Authentication Screen -->
-    <div id="auth-screen" class="auth-screen">
-        <div class="auth-container">
-            <div class="auth-header">
-                <h1 class="auth-title">SecBrain</h1>
-                <p class="auth-subtitle">Professional Habit Tracking</p>
-            </div>
-            <div class="auth-content">
-                <!-- TEST BUTTON - Should be visible -->
-                <button id="test-skip-btn" style="background-color: #00ff00 !important; color: #000 !important; padding: 20px !important; margin: 10px 0 !important; font-size: 18px !important; font-weight: bold !important; border: 3px solid #000 !important; display: block !important; width: 100% !important;">
-                    🎯 TEST: SKIP LOGIN BUTTON 🎯
-                </button>
-                
-                <button id="google-signin-btn" class="auth-button">
-                    <svg class="auth-icon" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Sign in with Google
-                </button>
-                
-                <div class="auth-divider">
-                    <span class="auth-divider-text">or</span>
-                </div>
-                
-                <button id="skip-login-btn" class="auth-button auth-button--secondary" style="display: flex !important; visibility: visible !important; opacity: 1 !important; background-color: #ff6b6b !important; color: white !important; border: 3px solid #ff4757 !important; font-size: 16px !important; font-weight: bold !important; margin: 10px 0 !important; padding: 15px !important;">
-                    <svg class="auth-icon" viewBox="0 0 24 24" style="width: 24px !important; height: 24px !important; fill: white !important;">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-                    </svg>
-                    🚀 CONTINUE WITHOUT SIGN-IN 🚀
-                </button>
-                
-                <p class="auth-note">Sign in to sync your habits across all devices, or continue offline</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Application -->
-    <div id="app" class="app hidden">
+<body>
+    <div class="app-container">
         <!-- Header -->
         <header class="header">
-            <div class="header__content">
-                <div class="header__left">
-                    <h1 class="header__title">SecBrain</h1>
-                    <div class="header__sync-status" id="sync-status">
-                        <span class="sync-indicator" id="sync-indicator"></span>
-                        <span class="sync-text" id="sync-text">Synced</span>
-                    </div>
-                </div>
-                <div class="header__right">
-                    <button id="theme-toggle" class="header__button" aria-label="Toggle theme">
-                        <svg class="theme-icon" viewBox="0 0 24 24">
-                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+            <div class="header-content">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                    <span class="hamburger"></span>
+                    <span class="hamburger"></span>
+                    <span class="hamburger"></span>
+                </button>
+                <h1 class="app-title">Second Brain</h1>
+                <div class="header-actions">
+                    <button class="action-btn" id="manualSaveBtn" aria-label="Save Data" title="Save all data to cloud">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17,21 17,13 7,13 7,21"></polyline>
+                            <polyline points="7,3 7,8 15,8"></polyline>
                         </svg>
                     </button>
-                    <button id="signout-btn" class="header__button" aria-label="Sign out">
-                        <svg class="signout-icon" viewBox="0 0 24 24">
-                            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    <button class="action-btn" id="searchBtn" aria-label="Search">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn" id="settingsBtn" aria-label="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
                         </svg>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="main">
-            <!-- Calendar Navigation -->
-            <div class="calendar-nav">
-                <button id="prev-month" class="nav-button" aria-label="Previous month">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
-                    </svg>
-                </button>
-                <h2 id="current-month" class="month-title">January 2024</h2>
-                <button id="next-month" class="nav-button" aria-label="Next month">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                    </svg>
-                </button>
-            </div>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3 class="nav-section-title">Modules</h3>
+                    <ul class="nav-list">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link active" data-module="dashboard">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="3" width="7" height="7"></rect>
+                                    <rect x="14" y="14" width="7" height="7"></rect>
+                                    <rect x="3" y="14" width="7" height="7"></rect>
+                                </svg>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="notes">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14,2 14,8 20,8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10,9 9,9 8,9"></polyline>
+                                </svg>
+                                Notes
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="tasks">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 11l3 3l8-8"></path>
+                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                                </svg>
+                                Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="completed-tasks">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                                </svg>
+                                Completed Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="bookmarks">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                Bookmarks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="calendar">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                Calendar
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="habits">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                                </svg>
+                                Habits
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="crm">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                                    <path d="M12 11h4"></path>
+                                    <path d="M12 16h4"></path>
+                                    <path d="M8 11h.01"></path>
+                                    <path d="M8 16h.01"></path>
+                                </svg>
+                                CRM
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="pomodoro">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                                Pomodoro
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="auth">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                Account
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="wallet">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                                    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                                    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                                </svg>
+                                Wallet
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="goals">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                                </svg>
+                                Goals
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="settings">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"></path>
+                                </svg>
+                                Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="logs">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14,2 14,8 20,8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    <polyline points="10,9 9,9 8,9"></polyline>
+                                </svg>
+                                Activity Log
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="nav-section">
+                    <h3 class="nav-section-title">Tools</h3>
+                    <ul class="nav-list">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="search">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <path d="m21 21-4.35-4.35"></path>
+                                </svg>
+                                Search
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-module="analytics">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 20V10"></path>
+                                    <path d="M12 20V4"></path>
+                                    <path d="M6 20v-6"></path>
+                                </svg>
+                                Analytics
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </aside>
 
-            <!-- Calendar Grid -->
-            <div class="calendar-container">
-                <div class="calendar-grid" id="calendar-grid">
-                    <!-- Calendar days will be generated here -->
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <div class="content-header">
+                <h2 class="content-title">Dashboard</h2>
+                <p class="content-subtitle">Welcome to your Second Brain</p>
+            </div>
+            
+            <div class="content-body">
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3>Quick Stats</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-number">0</span>
+                                <span class="stat-label">Notes</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">0</span>
+                                <span class="stat-label">Tasks</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">0</span>
+                                <span class="stat-label">Bookmarks</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Recent Activity</h3>
+                        <div class="activity-list">
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14,2 14,8 20,8"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="activity-content">
+                                    <p class="activity-text">Welcome to Second Brain</p>
+                                    <span class="activity-time">Just now</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3>Quick Actions</h3>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary">New Note</button>
+                            <button class="btn btn-secondary">Add Task</button>
+                            <button class="btn btn-secondary">Bookmark</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
+    </div>
 
-        <!-- Habit Modal -->
-        <div id="habit-modal" class="modal hidden">
-            <div class="modal__overlay"></div>
-            <div class="modal__content">
-                <div class="modal__header">
-                    <h3 id="modal-title" class="modal__title">Habits for Today</h3>
-                    <button id="close-modal" class="modal__close" aria-label="Close modal">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                        </svg>
-                    </button>
+    <!-- Completed Tasks View -->
+    <div class="completed-tasks-container" id="completedTasksView" style="display: none;">
+        <div class="completed-tasks-header">
+            <div class="completed-tasks-title-section">
+                <h2 class="completed-tasks-title">Completed Tasks</h2>
+                <p class="completed-tasks-subtitle">Review and select tasks for client reports</p>
+            </div>
+            <div class="completed-tasks-actions">
+                <div class="selection-info">
+                    <span id="selectedCount">0</span> of <span id="totalCount">0</span> tasks selected
                 </div>
-                <div class="modal__body">
-                    <div id="modal-habits" class="habits-list">
-                        <!-- Habits will be populated here -->
-                    </div>
-                    <div class="modal__actions">
-                        <button id="add-habit-btn" class="button button--primary">
-                            <svg class="button__icon" viewBox="0 0 24 24">
-                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                            </svg>
-                            Add Habit
-                        </button>
-                    </div>
+                <button class="btn btn-secondary" id="selectAllBtn">Select All</button>
+                <button class="btn btn-secondary" id="clearSelectionBtn">Clear Selection</button>
+                <button class="btn btn-primary" id="generateReportBtn" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14,2 14,8 20,8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Generate Report
+                </button>
+            </div>
+        </div>
+
+        <div class="completed-tasks-filters">
+            <div class="filter-group">
+                <label for="projectFilter">Project:</label>
+                <select id="projectFilter" class="filter-select">
+                    <option value="">All Projects</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="dateRangeStart">From Date:</label>
+                <input type="date" id="dateRangeStart" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label for="dateRangeEnd">To Date:</label>
+                <input type="date" id="dateRangeEnd" class="filter-input">
+            </div>
+            <div class="filter-group">
+                <label for="searchTasks">Search:</label>
+                <input type="text" id="searchTasks" class="filter-input" placeholder="Search tasks...">
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-secondary" id="clearFiltersBtn">Clear Filters</button>
+            </div>
+        </div>
+
+        <div class="completed-tasks-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCompletedTasks">0</div>
+                <div class="stat-label">Total Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalHoursSpent">0h</div>
+                <div class="stat-label">Hours Spent</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalValue">₹0</div>
+                <div class="stat-label">Total Value</div>
+            </div>
+        </div>
+
+        <div class="completed-tasks-list" id="completedTasksList">
+            <!-- Completed tasks will be rendered here -->
+        </div>
+
+        <div class="empty-state" id="emptyCompletedTasks" style="display: none;">
+            <div class="empty-state-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M9 12l2 2 4-4"></path>
+                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                </svg>
+            </div>
+            <h3>No Completed Tasks</h3>
+            <p>Complete some tasks to see them here and generate client reports.</p>
+        </div>
+    </div>
+
+        <!-- Authentication Modal (for future use) -->
+        <div class="auth-modal" id="authModal" style="display: none;">
+            <div class="auth-modal-content">
+                <div class="auth-modal-header">
+                    <h3 id="authModalTitle">Sign In</h3>
+                    <button class="auth-modal-close" id="authModalClose">&times;</button>
+                </div>
+                <div class="auth-modal-body">
+                    <form id="authForm">
+                        <div class="auth-form-group">
+                            <label for="authEmail">Email:</label>
+                            <input type="email" id="authEmail" class="form-input" required>
+                        </div>
+                        <div class="auth-form-group">
+                            <label for="authPassword">Password:</label>
+                            <input type="password" id="authPassword" class="form-input" required>
+                        </div>
+                        <div class="auth-form-actions">
+                            <button type="submit" class="btn btn-primary" id="authSubmitBtn">Sign In</button>
+                            <button type="button" class="btn btn-secondary" id="authSwitchBtn">Create Account</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Add Habit Form -->
-        <div id="add-habit-form" class="add-habit-form hidden">
-            <div class="form__overlay"></div>
-            <div class="form__content">
-                <div class="form__header">
-                    <h3 class="form__title">Add New Habit</h3>
-                    <button id="close-form" class="form__close" aria-label="Close form">
-                        <svg viewBox="0 0 24 24">
-                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                        </svg>
-                    </button>
+        <!-- Task Completion Modal -->
+        <div class="task-completion-modal" id="taskCompletionModal">
+        <div class="task-completion-modal-content">
+            <div class="task-completion-modal-header">
+                <h3 class="task-completion-modal-title">Task Completed!</h3>
+                <button class="task-completion-modal-close" id="taskCompletionModalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="task-completion-modal-body">
+                <div class="task-completion-info">
+                    <p class="task-completion-message">Great job completing this task! Please provide some details:</p>
+                    <div class="task-name-display" id="completedTaskName"></div>
                 </div>
-                <div class="form__body">
-                    <div class="form__group">
-                        <label for="habit-name" class="form__label">Habit Name</label>
-                        <input type="text" id="habit-name" class="form__input" placeholder="Enter habit name" maxlength="50">
-                    </div>
-                    <div class="form__actions">
-                        <button id="cancel-habit" class="button button--secondary">Cancel</button>
-                        <button id="save-habit" class="button button--primary">Save Habit</button>
-                    </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="hoursSpent">Hours Spent *</label>
+                    <input type="number" id="hoursSpent" class="form-input" min="0" step="0.25" placeholder="e.g., 2.5" required>
+                    <small class="form-hint">Enter the number of hours you spent on this task</small>
                 </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="completionNote">Completion Note (Optional)</label>
+                    <textarea id="completionNote" class="form-textarea" rows="3" placeholder="Add any notes about how the task went, what you learned, or any challenges you faced..."></textarea>
+                </div>
+            </div>
+            <div class="task-completion-modal-actions">
+                <button class="btn btn-secondary" id="cancelTaskCompletion">Cancel</button>
+                <button class="btn btn-primary" id="confirmTaskCompletion">Mark Complete</button>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Files -->
-    <script src="js/config/firebase-config.js"></script>
-    <script src="js/utils/date-utils.js"></script>
-    <script src="js/utils/storage-utils.js"></script>
-    <script src="js/utils/helpers.js"></script>
-    <script src="js/services/auth-service.js"></script>
-    <script src="js/services/database-service.js"></script>
-    <script src="js/services/sync-service.js"></script>
-    <script src="js/data/habit-manager.js"></script>
-    <script src="js/data/progress-manager.js"></script>
-    <script src="js/components/theme-manager.js"></script>
-    <script src="js/components/calendar.js"></script>
-    <script src="js/components/habit-modal.js"></script>
-    <script src="js/components/header.js"></script>
-    <script src="js/main.js"></script>
-
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then((registration) => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch((registrationError) => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
