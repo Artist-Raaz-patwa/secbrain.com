@@ -29,14 +29,26 @@ class FirebaseService {
             this.auth = window.firebase.auth;
             
             // Set up auth state listener for future user authentication
-            this.auth.onAuthStateChanged((user) => {
+            this.auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     this.userId = user.uid;
                     console.log('User authenticated:', user.uid);
+                    
+                    // If SecondBrain app exists, reload modules with new user data
+                    if (window.secondBrain) {
+                        console.log('🔄 Reloading modules for authenticated user...');
+                        await window.secondBrain.reloadModulesForUser();
+                    }
                 } else {
                     // For now, use a default user ID for anonymous usage
                     this.userId = 'anonymous_user';
                     console.log('Using anonymous user');
+                    
+                    // If SecondBrain app exists, reload modules for anonymous user
+                    if (window.secondBrain) {
+                        console.log('🔄 Reloading modules for anonymous user...');
+                        await window.secondBrain.reloadModulesForUser();
+                    }
                 }
             });
             
@@ -358,6 +370,40 @@ class FirebaseService {
         return await this.setDocument('pomodoro_state', this.userId, state);
     }
 
+    // Calendar methods
+    async getCalendarEvents() {
+        return await this.getCollection('calendar_events');
+    }
+
+    async saveCalendarEvent(event) {
+        if (event.id) {
+            return await this.setDocument('calendar_events', event.id.toString(), event);
+        } else {
+            return await this.addDocument('calendar_events', event);
+        }
+    }
+
+    async deleteCalendarEvent(eventId) {
+        return await this.deleteDocument('calendar_events', eventId.toString());
+    }
+
+    // Habits methods
+    async getHabits() {
+        return await this.getCollection('habits');
+    }
+
+    async saveHabit(habit) {
+        if (habit.id) {
+            return await this.setDocument('habits', habit.id.toString(), habit);
+        } else {
+            return await this.addDocument('habits', habit);
+        }
+    }
+
+    async deleteHabit(habitId) {
+        return await this.deleteDocument('habits', habitId.toString());
+    }
+
     // User Authentication Methods (for future expansion)
     async signInWithEmail(email, password) {
         if (!this.isInitialized) {
@@ -395,6 +441,42 @@ class FirebaseService {
         }
     }
 
+    async clearUserData() {
+        if (!this.isInitialized) {
+            console.error('Firebase not initialized');
+            return;
+        }
+
+        try {
+            console.log('🧹 Clearing user data for:', this.userId);
+            
+            // Clear all collections for the current user
+            const collections = ['projects', 'pomodoro_sessions', 'pomodoro_settings', 'pomodoro_state', 'crm_counters', 'calendar_events', 'habits'];
+            
+            for (const collection of collections) {
+                try {
+                    // Get all documents in the collection
+                    const documents = await this.getCollection(collection);
+                    
+                    // Delete each document that belongs to the current user
+                    for (const doc of documents) {
+                        if (doc.userId === this.userId) {
+                            await this.deleteDocument(collection, doc.id || doc.userId);
+                            console.log(`🗑️ Deleted ${collection}/${doc.id || doc.userId} for user ${this.userId}`);
+                        }
+                    }
+                } catch (error) {
+                    console.log(`⚠️ Error clearing ${collection}:`, error.message);
+                }
+            }
+            
+            console.log('✅ User data cleared successfully for:', this.userId);
+        } catch (error) {
+            console.error('Error clearing user data:', error);
+            throw error;
+        }
+    }
+
     async signOut() {
         if (!this.isInitialized) {
             console.error('Firebase not initialized');
@@ -402,10 +484,11 @@ class FirebaseService {
         }
         
         try {
+            // Don't clear Firebase data - just sign out
             const { signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
             await signOut(this.auth);
             this.userId = 'anonymous_user';
-            console.log('User signed out');
+            console.log('User signed out - data preserved on server');
         } catch (error) {
             console.error('Sign out error:', error);
             throw error;
@@ -724,15 +807,15 @@ class SecondBrain {
 
         // Initialize calendar if switching to calendar module
         if (moduleName === 'calendar') {
-            setTimeout(() => {
-                this.initializeCalendar();
+            setTimeout(async () => {
+                await this.initializeCalendar();
             }, 100);
         }
 
         // Initialize habits if switching to habits module
         if (moduleName === 'habits') {
-            setTimeout(() => {
-                this.initializeHabits();
+            setTimeout(async () => {
+                await this.initializeHabits();
             }, 100);
         }
 
@@ -1975,9 +2058,9 @@ class SecondBrain {
     }
 
     // Calendar Methods
-    initializeCalendar() {
-        this.calendar = new Calendar(this.currentDate);
-        this.calendar.render();
+    async initializeCalendar() {
+        this.calendar = new Calendar(this.currentDate, this.firebase);
+        await this.calendar.loadEvents();
         this.setupCalendarEventListeners();
         
         // Connect with habit tracker if it exists
@@ -2025,9 +2108,9 @@ class SecondBrain {
     }
 
     // Habit Tracker Methods
-    initializeHabits() {
-        this.habitTracker = new HabitTracker();
-        this.habitTracker.loadHabits();
+    async initializeHabits() {
+        this.habitTracker = new HabitTracker(this.firebase);
+        await this.habitTracker.loadHabits();
         this.setupHabitEventListeners();
         
         // Connect with calendar if it exists
@@ -2045,13 +2128,13 @@ class SecondBrain {
         const quantityInputGroup = document.getElementById('quantityInputGroup');
 
         if (habitInput && addHabitBtn) {
-            addHabitBtn.addEventListener('click', () => {
-                this.addHabit();
+            addHabitBtn.addEventListener('click', async () => {
+                await this.addHabit();
             });
 
-            habitInput.addEventListener('keypress', (e) => {
+            habitInput.addEventListener('keypress', async (e) => {
                 if (e.key === 'Enter') {
-                    this.addHabit();
+                    await this.addHabit();
                 }
             });
         }
@@ -2067,7 +2150,7 @@ class SecondBrain {
         }
     }
 
-    addHabit() {
+    async addHabit() {
         const habitInput = document.getElementById('habitInput');
         const quantityEnabled = document.getElementById('quantityEnabled');
         const quantityTarget = document.getElementById('quantityTarget');
@@ -2077,7 +2160,7 @@ class SecondBrain {
             const isQuantityEnabled = quantityEnabled && quantityEnabled.checked;
             const target = isQuantityEnabled && quantityTarget ? parseInt(quantityTarget.value) || 1 : 1;
             
-            this.habitTracker.addHabit(habitName, isQuantityEnabled, target);
+            await this.habitTracker.addHabit(habitName, isQuantityEnabled, target);
             
             // Reset form
             habitInput.value = '';
@@ -2128,6 +2211,15 @@ class SecondBrain {
             statusDescription.textContent = `Welcome back! You're signed in as ${user?.email || 'User'}`;
             authActions.innerHTML = `
                 <div class="action-buttons">
+                    <button class="btn btn-danger" id="clearAllDataBtn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3,6 5,6 21,6"></polyline>
+                            <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                        Clear All Data
+                    </button>
                     <button class="btn btn-secondary" id="signOutBtn">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -2179,6 +2271,14 @@ class SecondBrain {
         if (signUpBtn) {
             signUpBtn.addEventListener('click', () => {
                 this.showAuthModal('signup');
+            });
+        }
+
+        // Clear All Data Button
+        const clearAllDataBtn = document.getElementById('clearAllDataBtn');
+        if (clearAllDataBtn) {
+            clearAllDataBtn.addEventListener('click', () => {
+                this.clearAllData();
             });
         }
 
@@ -2261,31 +2361,210 @@ class SecondBrain {
         try {
             if (mode === 'signin') {
                 await this.firebase.signInWithEmail(email, password);
-                alert('Successfully signed in!');
+                this.showSaveNotification('Successfully signed in!', 'success');
             } else {
                 await this.firebase.signUpWithEmail(email, password);
-                alert('Account created successfully!');
+                this.showSaveNotification('Account created successfully!', 'success');
             }
 
             this.hideAuthModal();
             this.updateAuthStatus();
+            
+            // Reload modules to load user's data
+            await this.reloadModulesForUser();
+            
         } catch (error) {
             console.error('Auth error:', error);
-            alert(`Error: ${error.message}`);
+            this.showSaveNotification(`Error: ${error.message}`, 'error');
         } finally {
             submitBtn.disabled = false;
             submitBtn.textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
         }
     }
 
-    async signOut() {
+    async clearAllData() {
+        // Show options dialog
+        const choice = confirm(
+            'Choose how to clear your data:\n\n' +
+            'Click OK for: Clear from device only (data stays on server)\n' +
+            'Click Cancel for: Permanently delete from server (cannot be undone)'
+        );
+        
+        if (choice === null) {
+            return; // User cancelled
+        }
+        
+        if (choice) {
+            // Clear local data only
+            await this.clearLocalDataOnly();
+        } else {
+            // Permanently delete from server
+            await this.permanentlyDeleteData();
+        }
+    }
+
+    async clearLocalDataOnly() {
+        const confirmed = confirm(
+            'Clear data from this device only?\n\n' +
+            '📱 This will:\n' +
+            '• Clear data from this device\n' +
+            '• Keep your data safe on the server\n' +
+            '• You can log back in to access your data\n\n' +
+            'Click OK to continue or Cancel to keep your data.'
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+        
         try {
-            await this.firebase.signOut();
-            alert('Successfully signed out!');
+            // Clear all local storage data only
+            localStorage.clear();
+            console.log('🧹 Local storage cleared (server data preserved)');
+            
+            // Reset app state
+            this.crm = null;
+            this.pomodoro = null;
+            this.completedTasks = null;
+            
+            // Show success message
+            this.showSaveNotification('Local data cleared! Your data is safe on the server.', 'success');
+            
+            // Update auth status
             this.updateAuthStatus();
+            
+            // Refresh the current module to show empty state
+            if (this.currentModule) {
+                this.switchModule(this.currentModule);
+            }
+            
+        } catch (error) {
+            console.error('Clear local data error:', error);
+            this.showSaveNotification(`Error clearing local data: ${error.message}`, 'error');
+        }
+    }
+
+    async permanentlyDeleteData() {
+        const confirmed = confirm(
+            '⚠️ PERMANENTLY DELETE ALL DATA?\n\n' +
+            'This will permanently delete ALL your data including:\n' +
+            '• All projects and tasks\n' +
+            '• All Pomodoro sessions and history\n' +
+            '• All settings and preferences\n\n' +
+            '⚠️ This action cannot be undone!\n' +
+            '⚠️ Your data will be lost forever!\n\n' +
+            'Click OK to permanently delete or Cancel to keep your data.'
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        try {
+            // Clear all local storage data
+            localStorage.clear();
+            console.log('🧹 Local storage cleared');
+            
+            // Clear Firebase data permanently
+            await this.firebase.clearUserData();
+            
+            // Reset app state
+            this.crm = null;
+            this.pomodoro = null;
+            this.completedTasks = null;
+            
+            // Show success message
+            this.showSaveNotification('All data permanently deleted!', 'success');
+            
+            // Update auth status
+            this.updateAuthStatus();
+            
+            // Refresh the current module to show empty state
+            if (this.currentModule) {
+                this.switchModule(this.currentModule);
+            }
+            
+        } catch (error) {
+            console.error('Permanent delete error:', error);
+            this.showSaveNotification(`Error deleting data: ${error.message}`, 'error');
+        }
+    }
+
+    async reloadModulesForUser() {
+        try {
+            console.log('🔄 Reloading modules for user:', this.firebase.userId);
+            
+            // Reset app state
+            this.crm = null;
+            this.pomodoro = null;
+            this.completedTasks = null;
+            this.calendar = null;
+            this.habitTracker = null;
+            
+            // Reinitialize modules based on current module
+            if (this.currentModule === 'crm') {
+                await this.initializeCrm();
+            } else if (this.currentModule === 'pomodoro') {
+                await this.initializePomodoro();
+            } else if (this.currentModule === 'completed-tasks') {
+                await this.initializeCompletedTasks();
+            } else if (this.currentModule === 'calendar') {
+                await this.initializeCalendar();
+            } else if (this.currentModule === 'habits') {
+                await this.initializeHabits();
+            }
+            
+            // Update auth status
+            this.updateAuthStatus();
+            
+            console.log('✅ Modules reloaded successfully');
+        } catch (error) {
+            console.error('Error reloading modules:', error);
+        }
+    }
+
+    async signOut() {
+        // Show confirmation dialog
+        const confirmed = confirm(
+            'Are you sure you want to sign out?\n\n' +
+            '📱 This will:\n' +
+            '• Clear data from this device\n' +
+            '• Sign you out of your account\n\n' +
+            '💾 Your data will be safely stored on the server and will be available when you log back in.\n\n' +
+            'Click OK to continue or Cancel to stay signed in.'
+        );
+        
+        if (!confirmed) {
+            return;
+        }
+        
+        try {
+            // Clear all local storage data (device only)
+            localStorage.clear();
+            console.log('🧹 Local storage cleared');
+            
+            // Sign out (but keep data on Firebase server)
+            await this.firebase.signOut();
+            
+            // Reset app state
+            this.crm = null;
+            this.pomodoro = null;
+            this.completedTasks = null;
+            
+            // Show success message
+            this.showSaveNotification('Successfully signed out! Your data is safe on the server.', 'success');
+            
+            // Update auth status
+            this.updateAuthStatus();
+            
+            // Refresh the current module to show empty state
+            if (this.currentModule) {
+                this.switchModule(this.currentModule);
+            }
+            
         } catch (error) {
             console.error('Sign out error:', error);
-            alert(`Error: ${error.message}`);
+            this.showSaveNotification(`Error during logout: ${error.message}`, 'error');
         }
     }
 
@@ -3673,11 +3952,13 @@ function clearLogs() {
 
 // Calendar Class
 class Calendar {
-    constructor(initialDate = new Date()) {
+    constructor(initialDate = new Date(), firebaseService = null) {
         this.currentDate = new Date(initialDate);
         this.selectedDate = new Date();
         this.today = new Date();
         this.habitTracker = null;
+        this.firebase = firebaseService;
+        this.events = [];
         this.monthNames = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
@@ -3686,6 +3967,71 @@ class Calendar {
 
     setHabitTracker(habitTracker) {
         this.habitTracker = habitTracker;
+    }
+
+    async loadEvents() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const events = await this.firebase.getCalendarEvents();
+                this.events = events.filter(event => event.userId === this.firebase.userId);
+                console.log('📅 Calendar events loaded from Firebase:', this.events.length);
+            } else {
+                // Fallback to local storage
+                const stored = localStorage.getItem('calendar_events');
+                this.events = stored ? JSON.parse(stored) : [];
+                console.log('📅 Calendar events loaded from local storage:', this.events.length);
+            }
+            this.render();
+        } catch (error) {
+            console.error('Error loading calendar events:', error);
+            this.events = [];
+        }
+    }
+
+    async saveEvent(event) {
+        try {
+            if (!event.id) {
+                event.id = Date.now().toString();
+            }
+            event.userId = this.firebase ? this.firebase.userId : 'anonymous_user';
+            event.createdAt = event.createdAt || new Date().toISOString();
+            event.updatedAt = new Date().toISOString();
+
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.saveCalendarEvent(event);
+                console.log('📅 Event saved to Firebase:', event.title);
+            } else {
+                // Fallback to local storage
+                const existingIndex = this.events.findIndex(e => e.id === event.id);
+                if (existingIndex >= 0) {
+                    this.events[existingIndex] = event;
+                } else {
+                    this.events.push(event);
+                }
+                localStorage.setItem('calendar_events', JSON.stringify(this.events));
+                console.log('📅 Event saved to local storage:', event.title);
+            }
+            this.render();
+        } catch (error) {
+            console.error('Error saving calendar event:', error);
+        }
+    }
+
+    async deleteEvent(eventId) {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteCalendarEvent(eventId);
+                console.log('📅 Event deleted from Firebase:', eventId);
+            } else {
+                // Fallback to local storage
+                this.events = this.events.filter(event => event.id !== eventId);
+                localStorage.setItem('calendar_events', JSON.stringify(this.events));
+                console.log('📅 Event deleted from local storage:', eventId);
+            }
+            this.render();
+        } catch (error) {
+            console.error('Error deleting calendar event:', error);
+        }
     }
 
     render() {
@@ -3910,31 +4256,59 @@ class Calendar {
 
 // Habit Tracker Class
 class HabitTracker {
-    constructor() {
+    constructor(firebaseService = null) {
         this.habits = [];
         this.storageKey = 'secondBrainHabits';
         this.today = new Date().toDateString();
         this.calendar = null;
+        this.firebase = firebaseService;
     }
 
     setCalendar(calendar) {
         this.calendar = calendar;
     }
 
-    loadHabits() {
-        const stored = localStorage.getItem(this.storageKey);
-        if (stored) {
-            this.habits = JSON.parse(stored);
+    async loadHabits() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const habits = await this.firebase.getHabits();
+                this.habits = habits.filter(habit => habit.userId === this.firebase.userId);
+                console.log('🎯 Habits loaded from Firebase:', this.habits.length);
+            } else {
+                // Fallback to local storage
+                const stored = localStorage.getItem(this.storageKey);
+                this.habits = stored ? JSON.parse(stored) : [];
+                console.log('🎯 Habits loaded from local storage:', this.habits.length);
+            }
+            this.renderHabits();
+            this.updateStats();
+        } catch (error) {
+            console.error('Error loading habits:', error);
+            this.habits = [];
         }
-        this.renderHabits();
-        this.updateStats();
     }
 
-    saveHabits() {
-        localStorage.setItem(this.storageKey, JSON.stringify(this.habits));
+    async saveHabits() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each habit to Firebase
+                for (const habit of this.habits) {
+                    habit.userId = this.firebase.userId;
+                    habit.updatedAt = new Date().toISOString();
+                    await this.firebase.saveHabit(habit);
+                }
+                console.log('🎯 Habits saved to Firebase:', this.habits.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem(this.storageKey, JSON.stringify(this.habits));
+                console.log('🎯 Habits saved to local storage:', this.habits.length);
+            }
+        } catch (error) {
+            console.error('Error saving habits:', error);
+        }
     }
 
-    addHabit(name, isQuantityEnabled = false, target = 1) {
+    async addHabit(name, isQuantityEnabled = false, target = 1) {
         const habit = {
             id: Date.now().toString(),
             name: name,
@@ -3947,7 +4321,7 @@ class HabitTracker {
         };
         
         this.habits.push(habit);
-        this.saveHabits();
+        await this.saveHabits();
         this.renderHabits();
         this.updateStats();
         
@@ -3957,9 +4331,9 @@ class HabitTracker {
         }
     }
 
-    removeHabit(id) {
+    async removeHabit(id) {
         this.habits = this.habits.filter(habit => habit.id !== id);
-        this.saveHabits();
+        await this.saveHabits();
         this.renderHabits();
         this.updateStats();
         
