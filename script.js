@@ -828,15 +828,15 @@ class SecondBrain {
 
         // Initialize Wallet if switching to Wallet module
         if (moduleName === 'wallet') {
-            setTimeout(() => {
-                this.initializeWallet();
+            setTimeout(async () => {
+                await this.initializeWallet();
             }, 100);
         }
 
         // Initialize Goals if switching to Goals module
         if (moduleName === 'goals') {
-            setTimeout(() => {
-                initializeGoals();
+            setTimeout(async () => {
+                await initializeGoals();
             }, 100);
         }
 
@@ -1894,6 +1894,36 @@ class SecondBrain {
                 console.log('⚠️ CRM manager not initialized');
             }
 
+            // Save Wallet data to Google Firebase
+            if (this.wallet) {
+                try {
+                    console.log('🔄 Saving Wallet data to Firebase...');
+                    await this.wallet.saveTransactions();
+                    savedItems.push('Wallet Transactions');
+                    console.log('✅ Wallet data saved to Google Firebase successfully');
+                } catch (error) {
+                    errors.push(`Wallet: ${error.message}`);
+                    console.error('❌ Wallet save error:', error);
+                }
+            } else {
+                console.log('⚠️ Wallet manager not initialized');
+            }
+
+            // Save Goals data to Google Firebase
+            try {
+                console.log('🔄 Saving Goals data to Firebase...');
+                if (typeof saveGoals === 'function') {
+                    await saveGoals();
+                    savedItems.push('Goals');
+                    console.log('✅ Goals data saved to Google Firebase successfully');
+                } else {
+                    console.log('⚠️ Goals save function not available');
+                }
+            } catch (error) {
+                errors.push(`Goals: ${error.message}`);
+                console.error('❌ Goals save error:', error);
+            }
+
             // Save Pomodoro data to Google Firebase
             if (this.pomodoro) {
                 try {
@@ -2728,9 +2758,9 @@ class SecondBrain {
     }
 
     // Wallet Methods
-    initializeWallet() {
-        this.wallet = new WalletManager();
-        this.wallet.loadTransactions();
+    async initializeWallet() {
+        this.wallet = new WalletManager(this.firebase);
+        await this.wallet.loadTransactions();
         this.setupWalletEventListeners();
     }
 
@@ -3336,17 +3366,75 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Simple Goals System
-let goals = JSON.parse(localStorage.getItem('goals') || '[]');
+let goals = [];
 
-function initializeGoals() {
+async function initializeGoals() {
     const addBtn = document.getElementById('addGoalBtn');
     if (addBtn) {
         addBtn.onclick = addGoal;
     }
+    await loadGoals();
     displayGoals();
 }
 
-function addGoal() {
+async function loadGoals() {
+    try {
+        if (window.secondBrain && window.secondBrain.firebase && window.secondBrain.firebase.isInitialized) {
+            // Load goals from Firebase
+            const firebaseGoals = await window.secondBrain.firebase.getCollection('simple_goals');
+            if (firebaseGoals && firebaseGoals.length > 0) {
+                // Filter goals by current user
+                goals = firebaseGoals.filter(goal => goal.userId === window.secondBrain.firebase.userId);
+                console.log('🎯 Simple goals loaded from Firebase:', goals.length);
+            } else {
+                // No Firebase data, try local storage
+                loadGoalsFromLocalStorage();
+            }
+        } else {
+            // Firebase not initialized, use local storage
+            loadGoalsFromLocalStorage();
+        }
+    } catch (error) {
+        console.error('Error loading simple goals:', error);
+        // Fallback to local storage
+        loadGoalsFromLocalStorage();
+    }
+}
+
+function loadGoalsFromLocalStorage() {
+    const savedGoals = localStorage.getItem('goals');
+    if (savedGoals) {
+        goals = JSON.parse(savedGoals);
+    }
+    console.log('🎯 Simple goals loaded from local storage:', goals.length);
+}
+
+async function saveGoals() {
+    try {
+        if (window.secondBrain && window.secondBrain.firebase && window.secondBrain.firebase.isInitialized) {
+            // Save each goal to Firebase
+            for (const goal of goals) {
+                goal.userId = window.secondBrain.firebase.userId;
+                goal.updatedAt = new Date().toISOString();
+                await window.secondBrain.firebase.setDocument('simple_goals', goal.id.toString(), goal);
+            }
+            console.log('🎯 Simple goals saved to Firebase:', goals.length);
+        } else {
+            // Fallback to local storage
+            localStorage.setItem('goals', JSON.stringify(goals));
+            console.log('🎯 Simple goals saved to local storage:', goals.length);
+        }
+        
+        // Always save to local storage as backup
+        localStorage.setItem('goals', JSON.stringify(goals));
+    } catch (error) {
+        console.error('Error saving simple goals:', error);
+        // Fallback to local storage
+        localStorage.setItem('goals', JSON.stringify(goals));
+    }
+}
+
+async function addGoal() {
     const name = prompt('Enter goal name:');
     if (!name) return;
     
@@ -3363,11 +3451,14 @@ function addGoal() {
         current: 0,
         targetDate: targetDate,
         image: null,
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString(),
+        userId: window.secondBrain && window.secondBrain.firebase ? window.secondBrain.firebase.userId : 'anonymous_user',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     };
     
     goals.push(goal);
-    localStorage.setItem('goals', JSON.stringify(goals));
+    await saveGoals();
     
     // Log the activity
     logActivity('Goals', 'Added', `Created new goal: "${name}" with target amount ₹${target}`);
@@ -3412,7 +3503,7 @@ function displayGoals() {
     }).join('');
 }
 
-function updateGoal(id) {
+async function updateGoal(id) {
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
     
@@ -3421,7 +3512,8 @@ function updateGoal(id) {
     
     const oldAmount = goal.current;
     goal.current = parseFloat(amount) || 0;
-    localStorage.setItem('goals', JSON.stringify(goals));
+    goal.updatedAt = new Date().toISOString();
+    await saveGoals();
     
     // Log the activity
     logActivity('Goals', 'Updated', `Updated goal "${goal.name}": ₹${oldAmount} → ₹${goal.current}`);
@@ -3429,13 +3521,13 @@ function updateGoal(id) {
     displayGoals();
 }
 
-function deleteGoal(id) {
+async function deleteGoal(id) {
     const goal = goals.find(g => g.id === id);
     if (!goal) return;
     
     if (confirm('Are you sure you want to delete this goal?')) {
         goals = goals.filter(g => g.id !== id);
-        localStorage.setItem('goals', JSON.stringify(goals));
+        await saveGoals();
         
         // Log the activity
         logActivity('Goals', 'Deleted', `Deleted goal: "${goal.name}"`);
@@ -3477,9 +3569,10 @@ function addImage(id) {
         const file = e.target.files[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 goal.image = e.target.result;
-                localStorage.setItem('goals', JSON.stringify(goals));
+                goal.updatedAt = new Date().toISOString();
+                await saveGoals();
                 
                 // Log the activity
                 logActivity('Goals', 'Updated', `Added image to goal: "${goal.name}"`);
@@ -5007,7 +5100,9 @@ class CrmManager {
                 email: companyEmail.trim()
             },
             tasks: [],
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             completed: false
         };
 
@@ -5053,7 +5148,9 @@ class CrmManager {
             completed: false,
             parentTaskId: parentTaskId,
             subtasks: [],
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             hoursSpent: null,
             completionNote: null,
             completedAt: null
@@ -5691,49 +5788,80 @@ class CrmManager {
     // Data Persistence
     async saveProjects() {
         try {
-            // Save each project to Firebase
-            for (const project of this.projects) {
-                await this.firebase.saveProject(project);
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each project to Firebase
+                for (const project of this.projects) {
+                    project.userId = this.firebase.userId;
+                    project.updatedAt = new Date().toISOString();
+                    await this.firebase.saveProject(project);
+                }
+                
+                // Save counters
+                await this.firebase.setDocument('crm_counters', 'counters', {
+                    userId: this.firebase.userId,
+                    nextProjectId: this.nextProjectId,
+                    nextTaskId: this.nextTaskId,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('📊 CRM projects saved to Firebase:', this.projects.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem('crm_projects', JSON.stringify(this.projects));
+                localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
+                localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+                console.log('📊 CRM projects saved to local storage:', this.projects.length);
             }
             
-            // Save counters
-            await this.firebase.setDocument('crm_counters', 'counters', {
-                nextProjectId: this.nextProjectId,
-                nextTaskId: this.nextTaskId
-            });
-            
-            // Also save to local storage as backup
+            // Always save to local storage as backup
             localStorage.setItem('crm_projects', JSON.stringify(this.projects));
             localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
             localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
         } catch (error) {
-            console.error('Error saving projects:', error);
+            console.error('Error saving CRM projects:', error);
             // Fallback to local storage
-        localStorage.setItem('crm_projects', JSON.stringify(this.projects));
-        localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
-        localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+            localStorage.setItem('crm_projects', JSON.stringify(this.projects));
+            localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
+            localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
         }
     }
 
     async loadProjects() {
         try {
-            // Load projects from Firebase
-            const firebaseProjects = await this.firebase.getProjects();
-            if (firebaseProjects && firebaseProjects.length > 0) {
-                this.projects = firebaseProjects;
-                
-                // Load counters
-                const counters = await this.firebase.getDocument('crm_counters', 'counters');
-                if (counters) {
-                    this.nextProjectId = counters.nextProjectId || 1;
-                    this.nextTaskId = counters.nextTaskId || 1;
+            if (this.firebase && this.firebase.isInitialized) {
+                // Load projects from Firebase
+                const firebaseProjects = await this.firebase.getProjects();
+                if (firebaseProjects && firebaseProjects.length > 0) {
+                    // Filter projects by current user
+                    this.projects = firebaseProjects.filter(project => project.userId === this.firebase.userId);
+                    
+                    // Load counters
+                    const counters = await this.firebase.getDocument('crm_counters', 'counters');
+                    if (counters && counters.userId === this.firebase.userId) {
+                        this.nextProjectId = counters.nextProjectId || 1;
+                        this.nextTaskId = counters.nextTaskId || 1;
+                    } else {
+                        // Calculate next IDs from existing projects
+                        this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
+                        this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
+                    }
+                    console.log('📊 CRM projects loaded from Firebase:', this.projects.length);
                 } else {
-                    // Calculate next IDs from existing projects
-                    this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
-                    this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
+                    // No Firebase data, try local storage
+                    this.loadFromLocalStorage();
                 }
             } else {
-                // Fallback to local storage
+                // Firebase not initialized, use local storage
+                this.loadFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Error loading CRM projects:', error);
+            // Fallback to local storage
+            this.loadFromLocalStorage();
+        }
+    }
+
+    loadFromLocalStorage() {
         const savedProjects = localStorage.getItem('crm_projects');
         const savedNextProjectId = localStorage.getItem('crm_next_project_id');
         const savedNextTaskId = localStorage.getItem('crm_next_task_id');
@@ -5746,31 +5874,30 @@ class CrmManager {
         }
         if (savedNextTaskId) {
             this.nextTaskId = parseInt(savedNextTaskId);
-                }
-            }
-        } catch (error) {
-            console.error('Error loading projects:', error);
-            // Fallback to local storage
-            const savedProjects = localStorage.getItem('crm_projects');
-            const savedNextProjectId = localStorage.getItem('crm_next_project_id');
-            const savedNextTaskId = localStorage.getItem('crm_next_task_id');
+        }
+        console.log('📊 CRM projects loaded from local storage:', this.projects.length);
+    }
 
-            if (savedProjects) {
-                this.projects = JSON.parse(savedProjects);
-            }
-            if (savedNextProjectId) {
-                this.nextProjectId = parseInt(savedNextProjectId);
-            }
-            if (savedNextTaskId) {
-                this.nextTaskId = parseInt(savedNextTaskId);
-            }
+    // Force reload from Firebase (useful for sync issues)
+    async forceReloadFromFirebase() {
+        try {
+            console.log('🔄 Force reloading CRM data from Firebase...');
+            await this.loadProjects();
+            this.renderProjects();
+            this.updateStats();
+            console.log('✅ CRM data force reloaded successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Error force reloading CRM data:', error);
+            return false;
         }
     }
 }
 
 // Wallet Manager Class
 class WalletManager {
-    constructor() {
+    constructor(firebaseService) {
+        this.firebase = firebaseService;
         this.transactions = [];
         this.nextTransactionId = 1;
         this.currentFilter = 'all';
@@ -5785,7 +5912,9 @@ class WalletManager {
             description: description.trim(),
             date: date,
             type: type, // 'income' or 'expense'
-            createdAt: new Date().toISOString()
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
 
         this.transactions.push(transaction);
@@ -5802,6 +5931,7 @@ class WalletManager {
             transaction.description = description.trim();
             transaction.date = date;
             transaction.type = type;
+            transaction.updatedAt = new Date().toISOString();
             
             this.saveTransactions();
             this.renderTransactions();
@@ -6133,12 +6263,76 @@ class WalletManager {
     }
 
     // Data Persistence
-    saveTransactions() {
-        localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
-        localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
+    async saveTransactions() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each transaction to Firebase
+                for (const transaction of this.transactions) {
+                    transaction.userId = this.firebase.userId;
+                    transaction.updatedAt = new Date().toISOString();
+                    await this.firebase.setDocument('wallet_transactions', transaction.id.toString(), transaction);
+                }
+                
+                // Save counter
+                await this.firebase.setDocument('wallet_counters', 'counters', {
+                    userId: this.firebase.userId,
+                    nextTransactionId: this.nextTransactionId,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('💰 Wallet transactions saved to Firebase:', this.transactions.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
+                localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
+                console.log('💰 Wallet transactions saved to local storage:', this.transactions.length);
+            }
+            
+            // Always save to local storage as backup
+            localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
+            localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
+        } catch (error) {
+            console.error('Error saving wallet transactions:', error);
+            // Fallback to local storage
+            localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
+            localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
+        }
     }
 
-    loadTransactions() {
+    async loadTransactions() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Load transactions from Firebase
+                const firebaseTransactions = await this.firebase.getCollection('wallet_transactions');
+                if (firebaseTransactions && firebaseTransactions.length > 0) {
+                    // Filter transactions by current user
+                    this.transactions = firebaseTransactions.filter(transaction => transaction.userId === this.firebase.userId);
+                    
+                    // Load counter
+                    const counter = await this.firebase.getDocument('wallet_counters', 'counters');
+                    if (counter && counter.userId === this.firebase.userId) {
+                        this.nextTransactionId = counter.nextTransactionId || 1;
+                    } else {
+                        // Calculate next ID from existing transactions
+                        this.nextTransactionId = Math.max(...this.transactions.map(t => t.id), 0) + 1;
+                    }
+                    console.log('💰 Wallet transactions loaded from Firebase:', this.transactions.length);
+                } else {
+                    // No Firebase data, try local storage
+                    this.loadFromLocalStorage();
+                }
+            } else {
+                // Firebase not initialized, use local storage
+                this.loadFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Error loading wallet transactions:', error);
+            // Fallback to local storage
+            this.loadFromLocalStorage();
+        }
+    }
+
+    loadFromLocalStorage() {
         const savedTransactions = localStorage.getItem('wallet_transactions');
         const savedNextTransactionId = localStorage.getItem('wallet_next_transaction_id');
 
@@ -6148,13 +6342,30 @@ class WalletManager {
         if (savedNextTransactionId) {
             this.nextTransactionId = parseInt(savedNextTransactionId);
         }
+        console.log('💰 Wallet transactions loaded from local storage:', this.transactions.length);
+    }
+
+    // Force reload from Firebase (useful for sync issues)
+    async forceReloadFromFirebase() {
+        try {
+            console.log('🔄 Force reloading wallet data from Firebase...');
+            await this.loadTransactions();
+            this.renderTransactions();
+            this.updateStats();
+            console.log('✅ Wallet data force reloaded successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Error force reloading wallet data:', error);
+            return false;
+        }
     }
 }
 
 // Goals Manager Class
 class GoalsManager {
-    constructor() {
+    constructor(firebaseService) {
         console.log('GoalsManager constructor called');
+        this.firebase = firebaseService;
         this.goals = [];
         this.nextGoalId = 1;
         this.countdownIntervals = new Map();
@@ -6175,7 +6386,9 @@ class GoalsManager {
             targetDate: targetDate,
             imageData: imageData,
             completed: false,
+            userId: this.firebase ? this.firebase.userId : 'anonymous_user',
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             milestones: {
                 '25': false,
                 '50': false,
@@ -6205,6 +6418,7 @@ class GoalsManager {
             if (imageData !== null) {
                 goal.imageData = imageData;
             }
+            goal.updatedAt = new Date().toISOString();
             
             this.saveGoals();
             this.renderGoals();
@@ -6226,6 +6440,7 @@ class GoalsManager {
         if (goal) {
             const oldAmount = goal.currentAmount;
             goal.currentAmount = Math.max(0, parseFloat(newAmount));
+            goal.updatedAt = new Date().toISOString();
             
             // Check for milestone celebrations
             this.checkMilestones(goal, oldAmount);
@@ -6832,12 +7047,76 @@ class GoalsManager {
     }
 
     // Data Persistence
-    saveGoals() {
-        localStorage.setItem('goals_data', JSON.stringify(this.goals));
-        localStorage.setItem('goals_next_id', this.nextGoalId.toString());
+    async saveGoals() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Save each goal to Firebase
+                for (const goal of this.goals) {
+                    goal.userId = this.firebase.userId;
+                    goal.updatedAt = new Date().toISOString();
+                    await this.firebase.setDocument('goals', goal.id.toString(), goal);
+                }
+                
+                // Save counter
+                await this.firebase.setDocument('goals_counters', 'counters', {
+                    userId: this.firebase.userId,
+                    nextGoalId: this.nextGoalId,
+                    updatedAt: new Date().toISOString()
+                });
+                
+                console.log('🎯 Goals saved to Firebase:', this.goals.length);
+            } else {
+                // Fallback to local storage
+                localStorage.setItem('goals_data', JSON.stringify(this.goals));
+                localStorage.setItem('goals_next_id', this.nextGoalId.toString());
+                console.log('🎯 Goals saved to local storage:', this.goals.length);
+            }
+            
+            // Always save to local storage as backup
+            localStorage.setItem('goals_data', JSON.stringify(this.goals));
+            localStorage.setItem('goals_next_id', this.nextGoalId.toString());
+        } catch (error) {
+            console.error('Error saving goals:', error);
+            // Fallback to local storage
+            localStorage.setItem('goals_data', JSON.stringify(this.goals));
+            localStorage.setItem('goals_next_id', this.nextGoalId.toString());
+        }
     }
 
-    loadGoals() {
+    async loadGoals() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                // Load goals from Firebase
+                const firebaseGoals = await this.firebase.getCollection('goals');
+                if (firebaseGoals && firebaseGoals.length > 0) {
+                    // Filter goals by current user
+                    this.goals = firebaseGoals.filter(goal => goal.userId === this.firebase.userId);
+                    
+                    // Load counter
+                    const counter = await this.firebase.getDocument('goals_counters', 'counters');
+                    if (counter && counter.userId === this.firebase.userId) {
+                        this.nextGoalId = counter.nextGoalId || 1;
+                    } else {
+                        // Calculate next ID from existing goals
+                        this.nextGoalId = Math.max(...this.goals.map(g => g.id), 0) + 1;
+                    }
+                    console.log('🎯 Goals loaded from Firebase:', this.goals.length);
+                } else {
+                    // No Firebase data, try local storage
+                    this.loadFromLocalStorage();
+                }
+            } else {
+                // Firebase not initialized, use local storage
+                this.loadFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Error loading goals:', error);
+            // Fallback to local storage
+            this.loadFromLocalStorage();
+        }
+    }
+
+    loadFromLocalStorage() {
         const savedGoals = localStorage.getItem('goals_data');
         const savedNextId = localStorage.getItem('goals_next_id');
 
@@ -6847,11 +7126,22 @@ class GoalsManager {
         if (savedNextId) {
             this.nextGoalId = parseInt(savedNextId);
         }
+        console.log('🎯 Goals loaded from local storage:', this.goals.length);
+    }
 
-        // Start countdowns for all goals
-        this.goals.forEach(goal => {
-            this.startCountdown(goal.id);
-        });
+    // Force reload from Firebase (useful for sync issues)
+    async forceReloadFromFirebase() {
+        try {
+            console.log('🔄 Force reloading goals data from Firebase...');
+            await this.loadGoals();
+            this.renderGoals();
+            this.updateStats();
+            console.log('✅ Goals data force reloaded successfully');
+            return true;
+        } catch (error) {
+            console.error('❌ Error force reloading goals data:', error);
+            return false;
+        }
     }
 }
 
