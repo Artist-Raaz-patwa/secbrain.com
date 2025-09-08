@@ -587,9 +587,10 @@ class SecondBrain {
         }
         
         if (this.firebase.isInitialized) {
-            console.log('Firebase initialized, starting app...');
+            console.log('✅ Firebase initialized successfully, starting app...');
+            console.log('🔑 User ID:', this.firebase.userId);
         } else {
-            console.log('Firebase not available, using local storage fallback...');
+            console.log('⚠️ Firebase not available, using local storage fallback...');
         }
         
         this.init();
@@ -611,6 +612,20 @@ class SecondBrain {
         if (this.currentModule === 'crm') {
             setTimeout(async () => {
                 await this.initializeCrm();
+            }, 100);
+        }
+
+        // Initialize Wallet if we're starting on the Wallet module
+        if (this.currentModule === 'wallet') {
+            setTimeout(async () => {
+                await this.initializeWallet();
+            }, 100);
+        }
+
+        // Initialize Goals if we're starting on the Goals module
+        if (this.currentModule === 'goals') {
+            setTimeout(async () => {
+                await initializeGoals();
             }, 100);
         }
 
@@ -2207,11 +2222,13 @@ class SecondBrain {
 
     // CRM Methods
     async initializeCrm() {
+        console.log('🔄 Initializing CRM module...');
         this.crm = new CrmManager(this.firebase);
         await this.crm.loadProjects();
         this.crm.renderProjects();
         this.crm.updateStats();
         this.setupCrmEventListeners();
+        console.log('✅ CRM module initialized successfully');
     }
 
     // Pomodoro Methods
@@ -2542,6 +2559,10 @@ class SecondBrain {
                 await this.initializeCalendar();
             } else if (this.currentModule === 'habits') {
                 await this.initializeHabits();
+            } else if (this.currentModule === 'wallet') {
+                await this.initializeWallet();
+            } else if (this.currentModule === 'goals') {
+                await initializeGoals();
             }
             
             // Update auth status
@@ -2759,9 +2780,13 @@ class SecondBrain {
 
     // Wallet Methods
     async initializeWallet() {
+        console.log('🔄 Initializing Wallet module...');
         this.wallet = new WalletManager(this.firebase);
         await this.wallet.loadTransactions();
+        this.wallet.renderTransactions();
+        this.wallet.updateStats();
         this.setupWalletEventListeners();
+        console.log('✅ Wallet module initialized successfully');
     }
 
     setupWalletEventListeners() {
@@ -3369,12 +3394,14 @@ document.addEventListener('DOMContentLoaded', () => {
 let goals = [];
 
 async function initializeGoals() {
+    console.log('🔄 Initializing Goals module...');
     const addBtn = document.getElementById('addGoalBtn');
     if (addBtn) {
         addBtn.onclick = addGoal;
     }
     await loadGoals();
     displayGoals();
+    console.log('✅ Goals module initialized successfully');
 }
 
 async function loadGoals() {
@@ -3526,13 +3553,31 @@ async function deleteGoal(id) {
     if (!goal) return;
     
     if (confirm('Are you sure you want to delete this goal?')) {
-        goals = goals.filter(g => g.id !== id);
-        await saveGoals();
-        
-        // Log the activity
-        logActivity('Goals', 'Deleted', `Deleted goal: "${goal.name}"`);
-        
-        displayGoals();
+        try {
+            // Delete from Firebase first
+            if (window.secondBrain && window.secondBrain.firebase && window.secondBrain.firebase.isInitialized) {
+                await window.secondBrain.firebase.deleteDocument('simple_goals', id.toString());
+                console.log('🗑️ Goal deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            goals = goals.filter(g => g.id !== id);
+            
+            // Save the updated goals list
+            await saveGoals();
+            
+            // Log the activity
+            logActivity('Goals', 'Deleted', `Deleted goal: "${goal.name}"`);
+            
+            displayGoals();
+            console.log('✅ Goal deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting goal:', error);
+            // Still remove from local array even if Firebase delete fails
+            goals = goals.filter(g => g.id !== id);
+            await saveGoals();
+            displayGoals();
+        }
     }
 }
 
@@ -5084,8 +5129,7 @@ class CrmManager {
         this.projects = [];
         this.nextProjectId = 1;
         this.nextTaskId = 1;
-        this.loadProjects();
-        // Note: renderProjects() will be called by initializeCrm() after DOM is ready
+        // Note: loadProjects() will be called by initializeCrm() after DOM is ready
     }
 
     // Project Management
@@ -5129,10 +5173,30 @@ class CrmManager {
     }
 
     async deleteProject(id) {
-        this.projects = this.projects.filter(p => p.id !== id);
-        await this.saveProjects();
-        this.renderProjects();
-        this.updateStats();
+        try {
+            // Delete from Firebase first
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteProject(id);
+                console.log('🗑️ Project deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            this.projects = this.projects.filter(p => p.id !== id);
+            
+            // Save the updated projects list (this will update Firebase with the remaining projects)
+            await this.saveProjects();
+            this.renderProjects();
+            this.updateStats();
+            
+            console.log('✅ Project deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting project:', error);
+            // Still remove from local array even if Firebase delete fails
+            this.projects = this.projects.filter(p => p.id !== id);
+            await this.saveProjects();
+            this.renderProjects();
+            this.updateStats();
+        }
     }
 
     // Task Management
@@ -5191,10 +5255,29 @@ class CrmManager {
         const project = this.projects.find(p => p.id === projectId);
         if (!project) return;
 
-        this.removeTaskFromProject(project, taskId);
-        await this.saveProjects();
-        this.renderProjects();
-        this.updateStats();
+        try {
+            // Remove task from local project
+            this.removeTaskFromProject(project, taskId);
+            
+            // Update the project in Firebase (this will save the project with the task removed)
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.saveProject(project);
+                console.log('🗑️ Task deleted from Firebase project:', projectId, taskId);
+            }
+            
+            // Save all projects (this ensures local storage is also updated)
+            await this.saveProjects();
+            this.renderProjects();
+            this.updateStats();
+            
+            console.log('✅ Task deleted successfully:', taskId);
+        } catch (error) {
+            console.error('❌ Error deleting task:', error);
+            // Still update local data even if Firebase update fails
+            await this.saveProjects();
+            this.renderProjects();
+            this.updateStats();
+        }
     }
 
     async toggleTask(projectId, taskId) {
@@ -5789,17 +5872,17 @@ class CrmManager {
     async saveProjects() {
         try {
             if (this.firebase && this.firebase.isInitialized) {
-                // Save each project to Firebase
-                for (const project of this.projects) {
+            // Save each project to Firebase
+            for (const project of this.projects) {
                     project.userId = this.firebase.userId;
                     project.updatedAt = new Date().toISOString();
-                    await this.firebase.saveProject(project);
-                }
-                
-                // Save counters
-                await this.firebase.setDocument('crm_counters', 'counters', {
+                await this.firebase.saveProject(project);
+            }
+            
+            // Save counters
+            await this.firebase.setDocument('crm_counters', 'counters', {
                     userId: this.firebase.userId,
-                    nextProjectId: this.nextProjectId,
+                nextProjectId: this.nextProjectId,
                     nextTaskId: this.nextTaskId,
                     updatedAt: new Date().toISOString()
                 });
@@ -5820,33 +5903,33 @@ class CrmManager {
         } catch (error) {
             console.error('Error saving CRM projects:', error);
             // Fallback to local storage
-            localStorage.setItem('crm_projects', JSON.stringify(this.projects));
-            localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
-            localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+        localStorage.setItem('crm_projects', JSON.stringify(this.projects));
+        localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
+        localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
         }
     }
 
     async loadProjects() {
         try {
             if (this.firebase && this.firebase.isInitialized) {
-                // Load projects from Firebase
-                const firebaseProjects = await this.firebase.getProjects();
-                if (firebaseProjects && firebaseProjects.length > 0) {
+            // Load projects from Firebase
+            const firebaseProjects = await this.firebase.getProjects();
+            if (firebaseProjects && firebaseProjects.length > 0) {
                     // Filter projects by current user
                     this.projects = firebaseProjects.filter(project => project.userId === this.firebase.userId);
-                    
-                    // Load counters
-                    const counters = await this.firebase.getDocument('crm_counters', 'counters');
+                
+                // Load counters
+                const counters = await this.firebase.getDocument('crm_counters', 'counters');
                     if (counters && counters.userId === this.firebase.userId) {
-                        this.nextProjectId = counters.nextProjectId || 1;
-                        this.nextTaskId = counters.nextTaskId || 1;
-                    } else {
-                        // Calculate next IDs from existing projects
-                        this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
-                        this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
-                    }
-                    console.log('📊 CRM projects loaded from Firebase:', this.projects.length);
+                    this.nextProjectId = counters.nextProjectId || 1;
+                    this.nextTaskId = counters.nextTaskId || 1;
                 } else {
+                    // Calculate next IDs from existing projects
+                    this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
+                    this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
+                }
+                    console.log('📊 CRM projects loaded from Firebase:', this.projects.length);
+            } else {
                     // No Firebase data, try local storage
                     this.loadFromLocalStorage();
                 }
@@ -5862,19 +5945,19 @@ class CrmManager {
     }
 
     loadFromLocalStorage() {
-        const savedProjects = localStorage.getItem('crm_projects');
-        const savedNextProjectId = localStorage.getItem('crm_next_project_id');
-        const savedNextTaskId = localStorage.getItem('crm_next_task_id');
+            const savedProjects = localStorage.getItem('crm_projects');
+            const savedNextProjectId = localStorage.getItem('crm_next_project_id');
+            const savedNextTaskId = localStorage.getItem('crm_next_task_id');
 
-        if (savedProjects) {
-            this.projects = JSON.parse(savedProjects);
-        }
-        if (savedNextProjectId) {
-            this.nextProjectId = parseInt(savedNextProjectId);
-        }
-        if (savedNextTaskId) {
-            this.nextTaskId = parseInt(savedNextTaskId);
-        }
+            if (savedProjects) {
+                this.projects = JSON.parse(savedProjects);
+            }
+            if (savedNextProjectId) {
+                this.nextProjectId = parseInt(savedNextProjectId);
+            }
+            if (savedNextTaskId) {
+                this.nextTaskId = parseInt(savedNextTaskId);
+            }
         console.log('📊 CRM projects loaded from local storage:', this.projects.length);
     }
 
@@ -5901,7 +5984,7 @@ class WalletManager {
         this.transactions = [];
         this.nextTransactionId = 1;
         this.currentFilter = 'all';
-        this.loadTransactions();
+        // Note: loadTransactions() will be called by initializeWallet() after DOM is ready
     }
 
     // Transaction Management
@@ -5939,11 +6022,31 @@ class WalletManager {
         }
     }
 
-    deleteTransaction(id) {
-        this.transactions = this.transactions.filter(t => t.id !== id);
-        this.saveTransactions();
-        this.renderTransactions();
-        this.updateStats();
+    async deleteTransaction(id) {
+        try {
+            // Delete from Firebase first
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteDocument('wallet_transactions', id.toString());
+                console.log('🗑️ Transaction deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            this.transactions = this.transactions.filter(t => t.id !== id);
+            
+            // Save the updated transactions list
+            await this.saveTransactions();
+            this.renderTransactions();
+            this.updateStats();
+            
+            console.log('✅ Transaction deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting transaction:', error);
+            // Still remove from local array even if Firebase delete fails
+            this.transactions = this.transactions.filter(t => t.id !== id);
+            await this.saveTransactions();
+            this.renderTransactions();
+            this.updateStats();
+        }
     }
 
     // Statistics and Calculations
@@ -6063,7 +6166,7 @@ class WalletManager {
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                         </svg>
                     </button>
-                    <button class="transaction-action-btn" onclick="window.secondBrain.wallet.deleteTransaction(${transaction.id})" title="Delete Transaction">
+                    <button class="transaction-action-btn" onclick="window.secondBrain.wallet.deleteTransaction(${transaction.id}).catch(console.error)" title="Delete Transaction">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3,6 5,6 21,6"></polyline>
                             <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
@@ -6283,8 +6386,8 @@ class WalletManager {
                 console.log('💰 Wallet transactions saved to Firebase:', this.transactions.length);
             } else {
                 // Fallback to local storage
-                localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
-                localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
+        localStorage.setItem('wallet_transactions', JSON.stringify(this.transactions));
+        localStorage.setItem('wallet_next_transaction_id', this.nextTransactionId.toString());
                 console.log('💰 Wallet transactions saved to local storage:', this.transactions.length);
             }
             
@@ -6369,8 +6472,8 @@ class GoalsManager {
         this.goals = [];
         this.nextGoalId = 1;
         this.countdownIntervals = new Map();
-        this.loadGoals();
-        console.log('GoalsManager initialized with', this.goals.length, 'goals');
+        // Note: loadGoals() will be called by initializeGoals() after DOM is ready
+        console.log('GoalsManager initialized');
     }
 
     // Goal Management
@@ -6427,12 +6530,33 @@ class GoalsManager {
         }
     }
 
-    deleteGoal(id) {
-        this.goals = this.goals.filter(g => g.id !== id);
-        this.stopCountdown(id);
-        this.saveGoals();
-        this.renderGoals();
-        this.updateStats();
+    async deleteGoal(id) {
+        try {
+            // Delete from Firebase first
+            if (this.firebase && this.firebase.isInitialized) {
+                await this.firebase.deleteDocument('goals', id.toString());
+                console.log('🗑️ Goal deleted from Firebase:', id);
+            }
+            
+            // Remove from local array
+            this.goals = this.goals.filter(g => g.id !== id);
+            this.stopCountdown(id);
+            
+            // Save the updated goals list
+            await this.saveGoals();
+            this.renderGoals();
+            this.updateStats();
+            
+            console.log('✅ Goal deleted successfully:', id);
+        } catch (error) {
+            console.error('❌ Error deleting goal:', error);
+            // Still remove from local array even if Firebase delete fails
+            this.goals = this.goals.filter(g => g.id !== id);
+            this.stopCountdown(id);
+            await this.saveGoals();
+            this.renderGoals();
+            this.updateStats();
+        }
     }
 
     updateGoalAmount(id, newAmount) {
@@ -6662,7 +6786,7 @@ class GoalsManager {
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </button>
-                            <button class="goal-action-btn" onclick="window.secondBrain.goals.deleteGoal(${goal.id})" title="Delete Goal">
+                            <button class="goal-action-btn" onclick="window.secondBrain.goals.deleteGoal(${goal.id}).catch(console.error)" title="Delete Goal">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <polyline points="3,6 5,6 21,6"></polyline>
                                     <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
@@ -7067,8 +7191,8 @@ class GoalsManager {
                 console.log('🎯 Goals saved to Firebase:', this.goals.length);
             } else {
                 // Fallback to local storage
-                localStorage.setItem('goals_data', JSON.stringify(this.goals));
-                localStorage.setItem('goals_next_id', this.nextGoalId.toString());
+        localStorage.setItem('goals_data', JSON.stringify(this.goals));
+        localStorage.setItem('goals_next_id', this.nextGoalId.toString());
                 console.log('🎯 Goals saved to local storage:', this.goals.length);
             }
             
