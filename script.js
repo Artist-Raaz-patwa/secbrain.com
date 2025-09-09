@@ -1388,6 +1388,14 @@ class SecondBrain {
                         <span class="crm-stat-number" id="totalValue">₹0</span>
                         <span class="crm-stat-label">Total Value</span>
                     </div>
+                    <div class="crm-stat-card">
+                        <span class="crm-stat-number" id="receivedMoney">₹0</span>
+                        <span class="crm-stat-label">Received Money</span>
+                    </div>
+                    <div class="crm-stat-card">
+                        <span class="crm-stat-number" id="pendingMoney">₹0</span>
+                        <span class="crm-stat-label">Pending Money</span>
+                    </div>
                 </div>
                 
                 <div class="projects-list" id="projectsList">
@@ -6002,7 +6010,7 @@ class CrmManager {
     }
 
     // Project Management
-    async addProject(name, description, deadline, companyName, companyEmail) {
+    async addProject(name, description, deadline, companyName, companyEmail, fundingStatus = 'not_funded', receivedAmount = 0) {
         const project = {
             id: this.nextProjectId++,
             name: name.trim(),
@@ -6013,6 +6021,10 @@ class CrmManager {
                 email: companyEmail.trim()
             },
             tasks: [],
+            funding: {
+                status: fundingStatus, // 'funded', 'not_funded', 'partially_funded'
+                receivedAmount: parseFloat(receivedAmount) || 0
+            },
             userId: this.firebase ? this.firebase.userId : 'anonymous_user',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -6026,7 +6038,7 @@ class CrmManager {
         return project;
     }
 
-    async editProject(id, name, description, deadline, companyName, companyEmail) {
+    async editProject(id, name, description, deadline, companyName, companyEmail, fundingStatus, receivedAmount) {
         const project = this.projects.find(p => p.id === id);
         if (project) {
             project.name = name.trim();
@@ -6034,6 +6046,14 @@ class CrmManager {
             project.deadline = deadline;
             project.client.name = companyName.trim();
             project.client.email = companyEmail.trim();
+            
+            // Initialize funding object if it doesn't exist (for backward compatibility)
+            if (!project.funding) {
+                project.funding = { status: 'not_funded', receivedAmount: 0 };
+            }
+            
+            project.funding.status = fundingStatus;
+            project.funding.receivedAmount = parseFloat(receivedAmount) || 0;
             
             await this.saveProjects();
             this.renderProjects();
@@ -6232,6 +6252,9 @@ class CrmManager {
             // Mark all subtasks as completed
             this.markSubtasksCompleted(task);
             
+            // Auto-update funding status if project is fully completed
+            this.updateProjectFundingStatus(project);
+            
             await this.saveProjects();
             this.renderProjects();
             this.updateStats();
@@ -6290,6 +6313,28 @@ class CrmManager {
         }
     }
 
+    updateProjectFundingStatus(project) {
+        // Initialize funding object if it doesn't exist
+        if (!project.funding) {
+            project.funding = { status: 'not_funded', receivedAmount: 0 };
+        }
+        
+        const allTasks = this.getAllTasks(project);
+        const totalValue = allTasks.reduce((sum, task) => sum + task.price, 0);
+        const receivedAmount = project.funding.receivedAmount || 0;
+        
+        // Auto-update funding status based on received amount vs total value
+        if (totalValue === 0) {
+            project.funding.status = 'not_funded';
+        } else if (receivedAmount >= totalValue) {
+            project.funding.status = 'funded';
+        } else if (receivedAmount > 0) {
+            project.funding.status = 'partially_funded';
+        } else {
+            project.funding.status = 'not_funded';
+        }
+    }
+
     // Progress Calculation
     calculateProjectProgress(project) {
         const allTasks = this.getAllTasks(project);
@@ -6321,16 +6366,28 @@ class CrmManager {
         const allTasks = this.projects.flatMap(project => this.getAllTasks(project));
         const completedTasks = allTasks.filter(task => task.completed).length;
         const totalValue = allTasks.reduce((sum, task) => sum + task.price, 0);
+        
+        // Calculate funding statistics
+        const receivedMoney = this.projects.reduce((sum, project) => {
+            const projectFunding = project.funding || { receivedAmount: 0 };
+            return sum + (projectFunding.receivedAmount || 0);
+        }, 0);
+        
+        const pendingMoney = totalValue - receivedMoney;
 
         const totalProjectsEl = document.getElementById('totalProjects');
         const totalTasksEl = document.getElementById('totalTasks');
         const completedTasksEl = document.getElementById('completedTasks');
         const totalValueEl = document.getElementById('totalValue');
+        const receivedMoneyEl = document.getElementById('receivedMoney');
+        const pendingMoneyEl = document.getElementById('pendingMoney');
 
         if (totalProjectsEl) totalProjectsEl.textContent = totalProjects;
         if (totalTasksEl) totalTasksEl.textContent = allTasks.length;
         if (completedTasksEl) completedTasksEl.textContent = completedTasks;
         if (totalValueEl) totalValueEl.textContent = `₹${totalValue.toLocaleString()}`;
+        if (receivedMoneyEl) receivedMoneyEl.textContent = `₹${receivedMoney.toLocaleString()}`;
+        if (pendingMoneyEl) pendingMoneyEl.textContent = `₹${pendingMoney.toLocaleString()}`;
     }
 
     // Rendering
@@ -6358,15 +6415,38 @@ class CrmManager {
     renderProject(project) {
         const progress = this.calculateProjectProgress(project);
         const deadline = project.deadline ? new Date(project.deadline).toLocaleDateString() : 'No deadline';
+        const funding = project.funding || { status: 'not_funded', receivedAmount: 0 };
+        
+        // Calculate project total value
+        const allTasks = this.getAllTasks(project);
+        const totalValue = allTasks.reduce((sum, task) => sum + task.price, 0);
+        const pendingAmount = totalValue - funding.receivedAmount;
+        
+        // Get funding status tag
+        const getFundingTag = (status, receivedAmount, totalValue) => {
+            if (status === 'funded' || (totalValue > 0 && receivedAmount >= totalValue)) {
+                return '<span class="funding-tag funded">💰 Fully Funded</span>';
+            } else if (status === 'partially_funded' || receivedAmount > 0) {
+                return '<span class="funding-tag partially-funded">💳 Partially Funded</span>';
+            } else {
+                return '<span class="funding-tag not-funded">⏳ Not Funded</span>';
+            }
+        };
         
         return `
             <div class="project-card" data-project-id="${project.id}">
                 <div class="project-header">
                     <div class="project-info">
-                        <h3 class="project-title">${project.name}</h3>
+                        <div class="project-title-row">
+                            <h3 class="project-title">${project.name}</h3>
+                            ${getFundingTag(funding.status, funding.receivedAmount, totalValue)}
+                        </div>
                         <div class="project-meta">
                             <span>Company: ${project.client.name}</span>
                             <span>Deadline: ${deadline}</span>
+                            <span>Total Value: ₹${totalValue.toLocaleString()}</span>
+                            <span>Received: ₹${funding.receivedAmount.toLocaleString()}</span>
+                            <span>Pending: ₹${pendingAmount.toLocaleString()}</span>
                         </div>
                     </div>
                     <div class="project-progress">
@@ -6536,7 +6616,9 @@ class CrmManager {
                 formData.description,
                 formData.deadline,
                 formData.companyName,
-                formData.companyEmail
+                formData.companyEmail,
+                formData.fundingStatus,
+                formData.receivedAmount
             );
         });
     }
@@ -6552,7 +6634,9 @@ class CrmManager {
                 formData.description,
                 formData.deadline,
                 formData.companyName,
-                formData.companyEmail
+                formData.companyEmail,
+                formData.fundingStatus,
+                formData.receivedAmount
             );
         });
     }
@@ -6666,11 +6750,26 @@ class CrmManager {
                     <label class="form-label" for="companyEmail">Company Email</label>
                     <input type="email" id="companyEmail" name="companyEmail" class="form-input">
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="fundingStatus">Funding Status</label>
+                        <select id="fundingStatus" name="fundingStatus" class="form-input" required>
+                            <option value="not_funded">Not Funded</option>
+                            <option value="partially_funded">Partially Funded</option>
+                            <option value="funded">Fully Funded</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="receivedAmount">Received Amount (₹)</label>
+                        <input type="number" id="receivedAmount" name="receivedAmount" class="form-input" min="0" step="0.01" value="0">
+                    </div>
+                </div>
             </form>
         `;
     }
 
     getEditProjectModalContent(project) {
+        const funding = project.funding || { status: 'not_funded', receivedAmount: 0 };
         return `
             <form>
                 <div class="form-group">
@@ -6694,6 +6793,20 @@ class CrmManager {
                 <div class="form-group">
                     <label class="form-label" for="companyEmail">Company Email</label>
                     <input type="email" id="companyEmail" name="companyEmail" class="form-input" value="${project.client.email}">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="fundingStatus">Funding Status</label>
+                        <select id="fundingStatus" name="fundingStatus" class="form-input" required>
+                            <option value="not_funded" ${funding.status === 'not_funded' ? 'selected' : ''}>Not Funded</option>
+                            <option value="partially_funded" ${funding.status === 'partially_funded' ? 'selected' : ''}>Partially Funded</option>
+                            <option value="funded" ${funding.status === 'funded' ? 'selected' : ''}>Fully Funded</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="receivedAmount">Received Amount (₹)</label>
+                        <input type="number" id="receivedAmount" name="receivedAmount" class="form-input" min="0" step="0.01" value="${funding.receivedAmount || 0}">
+                    </div>
                 </div>
             </form>
         `;
