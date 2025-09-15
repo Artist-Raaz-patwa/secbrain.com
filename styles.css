@@ -43,6 +43,28 @@ body {
     overflow-x: hidden;
 }
 
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #ffffff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* App Container */
 .app-container {
     display: flex;
@@ -5797,5 +5819,662 @@ a:focus {
     .modal-content {
         width: 95%;
         margin: 20px;
+    }
+}
+
+/* Edit Completion Date Button */
+.edit-completion-date-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-completion-date-btn:hover {
+    color: var(--color-primary);
+    background-color: var(--color-gray-200);
+}
+
+.edit-completion-date-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Edit Completion Date Modal */
+.edit-completion-date-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.edit-completion-date-modal-content {
+    background-color: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.9);
+    animation: modalSlideIn 0.3s ease forwards;
+}
+
+.edit-completion-date-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 24px 0 24px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 24px;
+}
+
+.edit-completion-date-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.edit-completion-date-modal-close {
+    background: none;
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-completion-date-modal-close:hover {
+    color: var(--color-text-primary);
+    background-color: var(--color-gray-200);
+}
+
+.edit-completion-date-modal-body {
+    padding: 0 24px 24px 24px;
+}
+
+.edit-completion-date-info {
+    margin-bottom: 24px;
+}
+
+.edit-completion-date-message {
+    color: var(--color-text-secondary);
+    margin-bottom: 12px;
+}
+
+.edit-completion-date-modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 24px;
+    border-top: 1px solid var(--color-border);
+    margin-top: 24px;
+}
+
+/* Animation keyframes */
+@keyframes modalSlideIn {
+    to {
+        transform: scale(1);
+    }
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+/* Responsive adjustments for edit completion date modal */
+@media (max-width: 768px) {
+    .edit-completion-date-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .edit-completion-date-modal-header,
+    .edit-completion-date-modal-body,
+    .edit-completion-date-modal-actions {
+        padding: 16px;
+    }
+    
+    .edit-completion-date-modal-actions {
+        flex-direction: column;
+    }
+}
+
+/* Productivity Calendar Styles */
+.productivity-calendar-section {
+    margin: 2rem 0;
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+.productivity-calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.productivity-calendar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin: 0;
+}
+
+.view-toggle {
+    display: flex;
+    background-color: var(--color-gray-100);
+    border-radius: var(--border-radius);
+    padding: 4px;
+    gap: 4px;
+}
+
+.view-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: none;
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--color-gray-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.view-toggle-btn:hover {
+    color: var(--color-black);
+    background-color: var(--color-gray-200);
+}
+
+.view-toggle-btn.active {
+    background-color: var(--color-black);
+    color: var(--color-white);
+}
+
+.productivity-calendar-container {
+    padding: 1.5rem;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.calendar-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: none;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--border-radius);
+    color: var(--color-gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.calendar-nav-btn:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-black);
+    border-color: var(--color-gray-400);
+}
+
+.calendar-month-year {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin: 0;
+}
+
+.calendar-grid {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background-color: var(--color-gray-50);
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.calendar-weekday {
+    padding: 1rem 0.5rem;
+    text-align: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    min-height: 400px;
+}
+
+.productivity-calendar-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    padding: 0.5rem;
+    border-right: 1px solid var(--color-gray-200);
+    border-bottom: 1px solid var(--color-gray-200);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    background-color: var(--color-white);
+    color: var(--color-gray-700);
+    font-weight: 500;
+}
+
+.productivity-calendar-day:nth-child(7n) {
+    border-right: none;
+}
+
+.productivity-calendar-day:hover {
+    background-color: var(--color-gray-50);
+    color: var(--color-black);
+}
+
+.productivity-calendar-day.other-month {
+    color: var(--color-gray-400);
+    background-color: var(--color-gray-50);
+}
+
+.productivity-calendar-day.other-month:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-600);
+}
+
+.productivity-calendar-day.today {
+    background-color: var(--color-black);
+    color: var(--color-white);
+    font-weight: 700;
+}
+
+.productivity-calendar-day.today:hover {
+    background-color: var(--color-gray-800);
+}
+
+.productivity-calendar-day.selected {
+    background-color: var(--color-gray-200);
+    color: var(--color-black);
+    font-weight: 600;
+}
+
+.productivity-calendar-day.selected:hover {
+    background-color: var(--color-gray-300);
+}
+
+/* Productivity color coding - Darker colors for low productivity, lighter for high productivity */
+.productivity-calendar-day.productivity-0-25 {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: 1px solid #333333;
+}
+
+.productivity-calendar-day.productivity-26-50 {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    border: 1px solid #4b5563;
+}
+
+.productivity-calendar-day.productivity-51-75 {
+    background-color: #6b7280 !important;
+    color: #ffffff !important;
+    border: 1px solid #9ca3af;
+}
+
+.productivity-calendar-day.productivity-76-100 {
+    background-color: #9ca3af !important;
+    color: #000000 !important;
+    border: 1px solid #d1d5db;
+}
+
+.productivity-calendar-day.productivity-100-plus {
+    background-color: #d1d5db !important;
+    color: #000000 !important;
+    border: 2px solid #ffffff;
+    font-weight: 600;
+}
+
+/* Productivity percentage display */
+.productivity-percentage {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 1px 3px;
+    border-radius: 3px;
+    line-height: 1;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Adjust percentage color for different productivity levels */
+.productivity-calendar-day.productivity-76-100 .productivity-percentage,
+.productivity-calendar-day.productivity-100-plus .productivity-percentage {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+}
+
+.productivity-calendar-day.productivity-0-25 .productivity-percentage,
+.productivity-calendar-day.productivity-26-50 .productivity-percentage,
+.productivity-calendar-day.productivity-51-75 .productivity-percentage {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: black;
+    font-weight: 700;
+}
+
+.productivity-legend {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: var(--color-gray-50);
+    border-radius: var(--border-radius);
+}
+
+.legend-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-600);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.legend-items {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--color-gray-300);
+    display: block;
+}
+
+/* Ensure black color shows properly for 0-25% */
+.legend-color[style*="background-color: #000000"] {
+    background-color: #000000 !important;
+    border: 1px solid #333333 !important;
+}
+
+.legend-color.legend-100-plus {
+    border: 2px solid var(--color-gray-300);
+}
+
+.legend-item span {
+    font-size: 0.75rem;
+    color: var(--color-gray-600);
+    font-weight: 500;
+}
+
+/* Make legend more visible */
+.productivity-legend {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background-color: var(--color-gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--color-gray-200);
+}
+
+.legend-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin-bottom: 0.75rem;
+}
+
+/* Daily Productivity Modal */
+.daily-productivity-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+}
+
+.daily-productivity-modal.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.daily-productivity-modal-content {
+    background-color: var(--color-white);
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    transform: scale(0.9);
+    transition: var(--transition);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.daily-productivity-modal.open .daily-productivity-modal-content {
+    transform: scale(1);
+}
+
+.daily-productivity-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-gray-200);
+}
+
+.daily-productivity-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin: 0;
+}
+
+.daily-productivity-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: none;
+    border: none;
+    border-radius: var(--border-radius);
+    color: var(--color-gray-500);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.daily-productivity-modal-close:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-black);
+}
+
+.daily-productivity-modal-body {
+    padding: 1.5rem;
+}
+
+.daily-productivity-info {
+    margin-bottom: 1.5rem;
+}
+
+.productivity-date {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin-bottom: 1rem;
+}
+
+.productivity-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.productivity-metric {
+    text-align: center;
+    padding: 1rem;
+    background-color: var(--color-gray-50);
+    border-radius: var(--border-radius);
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-black);
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    font-weight: 500;
+}
+
+.completed-tasks-for-day {
+    border-top: 1px solid var(--color-gray-200);
+    padding-top: 1.5rem;
+}
+
+.completed-tasks-for-day h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-black);
+    margin-bottom: 1rem;
+}
+
+.task-item-for-day {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background-color: var(--color-gray-50);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+}
+
+.task-name-for-day {
+    font-weight: 500;
+    color: var(--color-black);
+}
+
+.task-hours-for-day {
+    font-size: 0.875rem;
+    color: var(--color-gray-600);
+    font-weight: 500;
+}
+
+/* Responsive adjustments for productivity calendar */
+@media (max-width: 768px) {
+    .productivity-calendar-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .view-toggle {
+        justify-content: center;
+    }
+    
+    .calendar-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .calendar-nav-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .calendar-month-year {
+        font-size: 1.25rem;
+    }
+    
+    .productivity-calendar-day {
+        min-height: 50px;
+        font-size: 0.875rem;
+    }
+    
+    .productivity-percentage {
+        font-size: 0.5rem;
+        padding: 1px 2px;
+        min-width: 16px;
+    }
+    
+    .legend-items {
+        justify-content: center;
+    }
+    
+    .productivity-summary {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .daily-productivity-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .daily-productivity-modal-header,
+    .daily-productivity-modal-body {
+        padding: 1rem;
     }
 }

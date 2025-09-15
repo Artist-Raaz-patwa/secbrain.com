@@ -34,6 +34,9 @@ class FirebaseService {
                     this.userId = user.uid;
                     console.log('User authenticated:', user.uid);
                     
+                    // Preload data in background for better performance
+                    this.preloadData();
+                    
                     // If SecondBrain app exists, reload modules with new user data
                     if (window.secondBrain) {
                         console.log('🔄 Reloading modules for authenticated user...');
@@ -60,6 +63,27 @@ class FirebaseService {
             this.isInitialized = false;
             this.userId = 'anonymous_user';
             console.log('Using local storage fallback');
+        }
+    }
+
+    // Preload data in background for better performance
+    async preloadData() {
+        try {
+            console.log('🚀 Preloading data in background...');
+            
+            // Preload projects data
+            if (window.secondBrain && window.secondBrain.crm) {
+                await window.secondBrain.crm.loadProjects();
+            }
+            
+            // Preload completed tasks data
+            if (window.secondBrain && window.secondBrain.completedTasks) {
+                window.secondBrain.completedTasks.loadCompletedTasks();
+            }
+            
+            console.log('✅ Background data preloading completed');
+        } catch (error) {
+            console.error('❌ Error preloading data:', error);
         }
     }
 
@@ -887,7 +911,7 @@ class SecondBrain {
         if (moduleName === 'completed-tasks') {
             setTimeout(() => {
                 this.initializeCompletedTasks();
-                this.completedTasks.loadCompletedTasks();
+                this.completedTasks.loadCompletedTasks(); // Will use cache if available
             }, 100);
         }
 
@@ -1701,15 +1725,23 @@ class SecondBrain {
                 <div class="completed-tasks-header">
                     <div class="completed-tasks-title-section">
                         <h2 class="completed-tasks-title">Completed Tasks</h2>
-                        <p class="completed-tasks-subtitle">View and manage your completed tasks</p>
+                        <p class="completed-tasks-subtitle">Review and select tasks for client reports</p>
                     </div>
                     <div class="completed-tasks-actions">
                         <div class="selection-info">
-                            <span id="selectionCount">0</span> of <span id="totalCount">0</span> selected
+                            <span id="selectedCount">0</span> of <span id="totalCount">0</span> tasks selected
                         </div>
                         <button class="btn btn-secondary" id="selectAllBtn">Select All</button>
                         <button class="btn btn-secondary" id="clearSelectionBtn">Clear Selection</button>
-                        <button class="btn btn-primary" id="generateReportBtn" disabled>Generate Report</button>
+                        <button class="btn btn-primary" id="generateReportBtn" disabled>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14,2 14,8 20,8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Generate Report
+                        </button>
                     </div>
                 </div>
 
@@ -1752,6 +1784,93 @@ class SecondBrain {
                     </div>
                 </div>
 
+                <!-- Productivity Calendar Section -->
+                <div class="productivity-calendar-section">
+                    <div class="productivity-calendar-header">
+                        <h3 class="productivity-calendar-title">Productivity Calendar</h3>
+                        <div class="view-toggle">
+                            <button class="view-toggle-btn active" id="listViewBtn" data-view="list">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                                </svg>
+                                List View
+                            </button>
+                            <button class="view-toggle-btn" id="calendarViewBtn" data-view="calendar">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                Calendar View
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar View -->
+                    <div class="productivity-calendar-container" id="productivityCalendarContainer" style="display: none;">
+                        <div class="calendar-header">
+                            <button class="calendar-nav-btn" id="prevMonthProductivity">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15,18 9,12 15,6"></polyline>
+                                </svg>
+                            </button>
+                            <h2 class="calendar-month-year" id="productivityCalendarMonthYear">January 2024</h2>
+                            <button class="calendar-nav-btn" id="nextMonthProductivity">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9,18 15,12 9,6"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="calendar-grid">
+                            <div class="calendar-weekdays">
+                                <div class="calendar-weekday">Sun</div>
+                                <div class="calendar-weekday">Mon</div>
+                                <div class="calendar-weekday">Tue</div>
+                                <div class="calendar-weekday">Wed</div>
+                                <div class="calendar-weekday">Thu</div>
+                                <div class="calendar-weekday">Fri</div>
+                                <div class="calendar-weekday">Sat</div>
+                            </div>
+                            <div class="calendar-days" id="productivityCalendarDays">
+                                <!-- Calendar days will be rendered here -->
+                            </div>
+                        </div>
+
+                        <div class="productivity-legend">
+                            <div class="legend-title">Productivity Scale</div>
+                            <div class="legend-items">
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background-color: #374151;"></div>
+                                    <span>0-25%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background-color: #6b7280;"></div>
+                                    <span>26-50%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background-color: #9ca3af;"></div>
+                                    <span>51-75%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color" style="background-color: #d1d5db;"></div>
+                                    <span>76-100%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color legend-100-plus" style="background-color: #ffffff;"></div>
+                                    <span>100%+</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="completed-tasks-list" id="completedTasksList">
                     <!-- Completed tasks will be rendered here -->
                 </div>
@@ -1759,8 +1878,8 @@ class SecondBrain {
                 <div class="empty-state" id="emptyCompletedTasks" style="display: none;">
                     <div class="empty-state-icon">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-                            <path d="M9 11l3 3l8-8"></path>
-                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9s9 4.03 9 9z"></path>
+                            <path d="M9 12l2 2 4-4"></path>
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
                         </svg>
                     </div>
                     <h3>No Completed Tasks</h3>
@@ -2329,7 +2448,7 @@ class SecondBrain {
     async initializeCrm() {
         console.log('🔄 Initializing CRM module...');
         this.crm = new CrmManager(this.firebase);
-        await this.crm.loadProjects();
+        await this.crm.loadProjects(); // Will use cache if available
         this.crm.renderProjects();
         this.crm.updateStats();
         this.setupCrmEventListeners();
@@ -2960,16 +3079,21 @@ class SecondBrain {
         }
 
         if (searchTasks) {
-            searchTasks.addEventListener('input', () => {
+            // Use debounced search for better performance
+            const debouncedSearch = this.tasks.debounce ? this.tasks.debounce(() => {
                 this.tasks.searchTasks();
-            });
+            }, 300) : () => this.tasks.searchTasks();
+            
+            searchTasks.addEventListener('input', debouncedSearch);
         }
     }
 
     // Completed Tasks Methods
     initializeCompletedTasks() {
         this.completedTasks = new CompletedTasksManager();
+        this.productivityCalendar = new ProductivityCalendar(this.completedTasks, this.firebase);
         this.setupCompletedTasksEventListeners();
+        this.productivityCalendar.initialize();
     }
 
     setupCompletedTasksEventListeners() {
@@ -3019,9 +3143,12 @@ class SecondBrain {
         }
 
         if (searchTasks) {
-            searchTasks.addEventListener('input', () => {
+            // Use debounced search for better performance
+            const debouncedFilter = this.completedTasks.debounce(() => {
                 this.completedTasks.filterTasks();
-            });
+            }, 300);
+            
+            searchTasks.addEventListener('input', debouncedFilter);
         }
 
         if (clearFiltersBtn) {
@@ -3046,25 +3173,86 @@ class CompletedTasksManager {
             dateEnd: '',
             search: ''
         };
+        this.cache = {
+            tasks: null,
+            lastUpdated: null,
+            cacheTimeout: 15000 // 15 seconds cache for completed tasks
+        };
+        this.isLoading = false;
     }
 
-    loadCompletedTasks() {
-        // Get all completed tasks from CRM projects
-        this.completedTasks = [];
-        
-        if (window.secondBrain && window.secondBrain.crm && window.secondBrain.crm.projects) {
-            window.secondBrain.crm.projects.forEach(project => {
-                this.collectCompletedTasks(project.tasks, project);
-            });
+    // Cache management
+    invalidateCache() {
+        this.cache.tasks = null;
+        this.cache.lastUpdated = null;
+        console.log('🗑️ Completed tasks cache invalidated');
+    }
+
+    // Debounced search for better performance
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    loadCompletedTasks(forceReload = false) {
+        // Prevent multiple simultaneous loads
+        if (this.isLoading) {
+            console.log('⏳ Completed tasks loading already in progress, skipping...');
+            return;
         }
 
-        // Sort by completion date (newest first)
-        this.completedTasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+        // Check cache first
+        if (!forceReload && this.cache.tasks && this.cache.lastUpdated) {
+            const now = Date.now();
+            if (now - this.cache.lastUpdated < this.cache.cacheTimeout) {
+                console.log('📦 Using cached completed tasks data');
+                this.completedTasks = this.cache.tasks;
+                this.filteredTasks = [...this.completedTasks];
+                this.updateProjectFilter();
+                this.renderCompletedTasks();
+                this.updateStats();
+                return;
+            }
+        }
+
+        this.isLoading = true;
         
-        this.filteredTasks = [...this.completedTasks];
-        this.updateProjectFilter();
-        this.renderCompletedTasks();
-        this.updateStats();
+        try {
+            // Get all completed tasks from CRM projects
+            this.completedTasks = [];
+            
+            if (window.secondBrain && window.secondBrain.crm && window.secondBrain.crm.projects) {
+                window.secondBrain.crm.projects.forEach(project => {
+                    this.collectCompletedTasks(project.tasks, project);
+                });
+            }
+
+            // Sort by completion date (newest first)
+            this.completedTasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt));
+            
+            // Update cache
+            this.cache.tasks = [...this.completedTasks];
+            this.cache.lastUpdated = Date.now();
+            
+            this.filteredTasks = [...this.completedTasks];
+            this.updateProjectFilter();
+            this.renderCompletedTasks();
+            this.updateStats();
+            
+            // Update productivity calendar if it exists
+            if (window.secondBrain && window.secondBrain.productivityCalendar) {
+                window.secondBrain.productivityCalendar.updateCalendar();
+            }
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     collectCompletedTasks(tasks, project, parentTask = null) {
@@ -3074,6 +3262,7 @@ class CompletedTasksManager {
                     ...task,
                     projectName: project.name,
                     projectId: project.id,
+                    companyName: project.client ? project.client.name : 'Unknown Company',
                     parentTaskName: parentTask ? parentTask.name : null
                 });
             }
@@ -3220,6 +3409,12 @@ class CompletedTasksManager {
                     </div>
                     <div class="completed-task-meta">
                         ${task.price > 0 ? `<div class="completed-task-price">₹${task.price.toLocaleString()}</div>` : ''}
+                        <button class="edit-completion-date-btn" onclick="event.stopPropagation(); window.secondBrain.completedTasks.openEditCompletionDateModal(${task.id})" title="Edit completion date">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
                     </div>
                     ${task.completionNote ? `
                         <div class="completed-task-note">
@@ -3321,6 +3516,7 @@ class CompletedTasksManager {
             tasks: selectedTasksData.map(task => ({
                 name: task.name,
                 project: task.projectName,
+                company: task.companyName,
                 description: task.description,
                 hoursSpent: task.hoursSpent,
                 price: task.price,
@@ -3340,7 +3536,7 @@ class CompletedTasksManager {
         modal.innerHTML = `
             <div class="report-modal-content">
                 <div class="report-modal-header">
-                    <h3 class="report-modal-title">Client Report</h3>
+                    <h3 class="report-modal-title">Work Report</h3>
                     <button class="report-modal-close" onclick="this.closest('.report-modal').remove()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -3352,6 +3548,7 @@ class CompletedTasksManager {
                     <div class="report-actions">
                         <button class="btn btn-primary" onclick="window.secondBrain.completedTasks.copyReportToClipboard()">Copy HTML</button>
                         <button class="btn btn-secondary" onclick="window.secondBrain.completedTasks.downloadHtmlReport()">Download HTML</button>
+                        <button class="btn btn-secondary" onclick="window.secondBrain.completedTasks.downloadPdfReport()">Export PDF</button>
                     </div>
                     <div class="report-preview">
                         <h4>Preview:</h4>
@@ -3475,14 +3672,16 @@ class CompletedTasksManager {
         const date = new Date(reportData.generatedAt).toLocaleDateString();
         
         let html = `
-            <div style="font-family: Arial, sans-serif; color: black; background: white; padding: 20px; max-width: 800px; margin: 0 auto;">
-                <h1 style="text-align: center; margin-bottom: 30px; font-size: 24px; font-weight: bold;">CLIENT WORK REPORT</h1>
+            <div style="font-family: Arial, sans-serif; color: black; background: white; padding: 20px; max-width: 1000px; margin: 0 auto;">
+                <h1 style="text-align: center; margin-bottom: 30px; font-size: 24px; font-weight: bold;">WORK REPORT</h1>
                 <p style="text-align: center; margin-bottom: 30px; font-size: 14px;">Generated on: ${date}</p>
                 
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
                     <thead>
                         <tr style="background-color: #f5f5f5;">
                             <th style="border: 1px solid #000; padding: 8px; text-align: left; font-weight: bold;">Task Name</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: left; font-weight: bold;">Company</th>
+                            <th style="border: 1px solid #000; padding: 8px; text-align: left; font-weight: bold;">Project</th>
                             <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Hours Spent</th>
                             <th style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">Completion Date</th>
                         </tr>
@@ -3491,10 +3690,12 @@ class CompletedTasksManager {
         `;
 
         reportData.tasks.forEach((task, index) => {
-            const completedDate = new Date(task.completedAt).toISOString().split('T')[0]; // YYYY-MM-DD format
+            const completedDate = new Date(task.completedAt).toLocaleDateString(); // Date only, no time
             html += `
                 <tr>
                     <td style="border: 1px solid #000; padding: 8px;">${task.name}</td>
+                    <td style="border: 1px solid #000; padding: 8px;">${task.company}</td>
+                    <td style="border: 1px solid #000; padding: 8px;">${task.project}</td>
                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${task.hoursSpent}h</td>
                     <td style="border: 1px solid #000; padding: 8px; text-align: center;">${completedDate}</td>
                 </tr>
@@ -3506,7 +3707,7 @@ class CompletedTasksManager {
                     </tbody>
                     <tfoot>
                         <tr style="background-color: #f0f0f0; font-weight: bold;">
-                            <td style="border: 1px solid #000; padding: 8px; text-align: right;">TOTAL:</td>
+                            <td style="border: 1px solid #000; padding: 8px; text-align: right;" colspan="3">TOTAL:</td>
                             <td style="border: 1px solid #000; padding: 8px; text-align: center;">${reportData.totalHours}h</td>
                             <td style="border: 1px solid #000; padding: 8px; text-align: center;">-</td>
                         </tr>
@@ -3544,11 +3745,281 @@ class CompletedTasksManager {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `client-report-${new Date().toISOString().split('T')[0]}.html`;
+        a.download = `work-report-${new Date().toISOString().split('T')[0]}.html`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }
+
+    downloadPdfReport() {
+        if (!this.currentReportData) return;
+        
+        try {
+            // Check if jsPDF is available
+            if (typeof window.jspdf === 'undefined') {
+                alert('PDF library not loaded. Please refresh the page and try again.');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation for better table fit
+            
+            // Set up fonts and colors
+            doc.setFont('helvetica');
+            doc.setFontSize(16);
+            
+            // Title
+            doc.text('WORK REPORT', 105, 20, { align: 'center' });
+            
+            // Generation date
+            const date = new Date(this.currentReportData.generatedAt).toLocaleDateString();
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${date}`, 105, 30, { align: 'center' });
+            
+            // Table setup
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            const margin = 20;
+            const tableWidth = pageWidth - (2 * margin);
+            
+            // Column widths (landscape mode)
+            const colWidths = [50, 40, 40, 25, 30]; // Task, Company, Project, Hours, Date
+            const colPositions = [margin];
+            for (let i = 1; i < colWidths.length; i++) {
+                colPositions.push(colPositions[i-1] + colWidths[i-1]);
+            }
+            
+            // Table headers
+            const headers = ['Task Name', 'Company', 'Project', 'Hours', 'Date'];
+            let yPosition = 45;
+            
+            // Draw header row
+            doc.setFillColor(245, 245, 245);
+            doc.rect(margin, yPosition - 5, tableWidth, 10, 'F');
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            headers.forEach((header, index) => {
+                doc.text(header, colPositions[index] + 2, yPosition, { align: 'left' });
+            });
+            
+            yPosition += 10;
+            
+            // Draw table rows
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            
+            this.currentReportData.tasks.forEach((task, index) => {
+                // Check if we need a new page
+                if (yPosition > pageHeight - 30) {
+                    doc.addPage();
+                    yPosition = 20;
+                }
+                
+                const completedDate = new Date(task.completedAt).toLocaleDateString();
+                const rowData = [
+                    task.name,
+                    task.company,
+                    task.project,
+                    `${task.hoursSpent}h`,
+                    completedDate
+                ];
+                
+                // Draw row background (alternating colors)
+                if (index % 2 === 0) {
+                    doc.setFillColor(250, 250, 250);
+                    doc.rect(margin, yPosition - 4, tableWidth, 8, 'F');
+                }
+                
+                // Draw cell borders and content
+                rowData.forEach((cellData, colIndex) => {
+                    // Truncate long text
+                    let displayText = cellData;
+                    if (colIndex === 0 && cellData.length > 25) {
+                        displayText = cellData.substring(0, 22) + '...';
+                    } else if (colIndex === 1 && cellData.length > 15) {
+                        displayText = cellData.substring(0, 12) + '...';
+                    } else if (colIndex === 2 && cellData.length > 15) {
+                        displayText = cellData.substring(0, 12) + '...';
+                    }
+                    
+                    doc.text(displayText, colPositions[colIndex] + 2, yPosition, { align: 'left' });
+                });
+                
+                yPosition += 8;
+            });
+            
+            // Draw total row
+            yPosition += 5;
+            doc.setFont('helvetica', 'bold');
+            doc.setFillColor(240, 240, 240);
+            doc.rect(margin, yPosition - 4, tableWidth, 8, 'F');
+            
+            doc.text('TOTAL:', colPositions[0] + 2, yPosition, { align: 'left' });
+            doc.text(`${this.currentReportData.totalHours}h`, colPositions[3] + 2, yPosition, { align: 'left' });
+            
+            // Summary information
+            yPosition += 20;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(`Total Tasks: ${this.currentReportData.totalTasks}`, margin, yPosition);
+            doc.text(`Total Hours: ${this.currentReportData.totalHours}h`, margin, yPosition + 8);
+            if (this.currentReportData.totalValue > 0) {
+                doc.text(`Total Value: ₹${this.currentReportData.totalValue.toLocaleString()}`, margin, yPosition + 16);
+            }
+            
+            // Save the PDF
+            const fileName = `work-report-${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(fileName);
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        }
+    }
+
+    // Edit Completion Date Methods
+    openEditCompletionDateModal(taskId) {
+        const task = this.completedTasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // Store the current task being edited
+        this.currentEditingTask = task;
+
+        // Set the task name in the modal
+        const taskNameEl = document.getElementById('editCompletionTaskName');
+        if (taskNameEl) {
+            taskNameEl.textContent = task.name;
+        }
+
+        // Set current completion date and time
+        const completionDate = new Date(task.completedAt);
+        const dateInput = document.getElementById('editCompletionDate');
+        const timeInput = document.getElementById('editCompletionTime');
+        
+        if (dateInput) {
+            dateInput.value = completionDate.toISOString().split('T')[0];
+        }
+        
+        if (timeInput) {
+            timeInput.value = completionDate.toTimeString().slice(0, 5);
+        }
+
+        // Show the modal
+        const modal = document.getElementById('editCompletionDateModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+
+        // Setup event listeners for the modal
+        this.setupEditCompletionDateEventListeners();
+    }
+
+    setupEditCompletionDateEventListeners() {
+        const modal = document.getElementById('editCompletionDateModal');
+        const closeBtn = document.getElementById('editCompletionDateModalClose');
+        const cancelBtn = document.getElementById('cancelEditCompletionDate');
+        const saveBtn = document.getElementById('saveEditCompletionDate');
+
+        // Close modal handlers
+        const closeModal = () => {
+            if (modal) modal.style.display = 'none';
+            this.currentEditingTask = null;
+        };
+
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (cancelBtn) cancelBtn.onclick = closeModal;
+        
+        // Close on backdrop click
+        if (modal) {
+            modal.onclick = (e) => {
+                if (e.target === modal) closeModal();
+            };
+        }
+
+        // Save changes handler
+        if (saveBtn) {
+            saveBtn.onclick = () => this.saveCompletionDateChanges();
+        }
+    }
+
+    async saveCompletionDateChanges() {
+        if (!this.currentEditingTask) return;
+
+        const dateInput = document.getElementById('editCompletionDate');
+        const timeInput = document.getElementById('editCompletionTime');
+
+        if (!dateInput || !timeInput || !dateInput.value || !timeInput.value) {
+            alert('Please fill in both date and time fields.');
+            return;
+        }
+
+        try {
+            // Create new completion date
+            const newCompletionDate = new Date(`${dateInput.value}T${timeInput.value}`);
+            
+            // Update the task in the original project
+            await this.updateTaskCompletionDate(this.currentEditingTask, newCompletionDate);
+            
+            // Update the task in our local completed tasks array
+            this.currentEditingTask.completedAt = newCompletionDate.toISOString();
+            
+            // Refresh the display
+            this.renderCompletedTasks();
+            this.updateStats();
+            
+            // Close modal
+            const modal = document.getElementById('editCompletionDateModal');
+            if (modal) modal.style.display = 'none';
+            
+            this.currentEditingTask = null;
+            
+            // Show success message
+            if (window.secondBrain && window.secondBrain.showNotification) {
+                window.secondBrain.showNotification('Completion date updated successfully!');
+            }
+            
+        } catch (error) {
+            console.error('Error updating completion date:', error);
+            alert('Error updating completion date. Please try again.');
+        }
+    }
+
+    async updateTaskCompletionDate(task, newCompletionDate) {
+        // Find the original task in the CRM projects and update it
+        if (window.secondBrain && window.secondBrain.crm && window.secondBrain.crm.projects) {
+            for (const project of window.secondBrain.crm.projects) {
+                const originalTask = this.findTaskInProject(project, task.id);
+                if (originalTask) {
+                    originalTask.completedAt = newCompletionDate.toISOString();
+                    originalTask.updatedAt = new Date().toISOString();
+                    
+                    // Save the updated projects
+                    await window.secondBrain.crm.saveProjects();
+                    break;
+                }
+            }
+        }
+    }
+
+    findTaskInProject(project, taskId) {
+        // Search in main tasks
+        for (const task of project.tasks) {
+            if (task.id === taskId) return task;
+            const found = this.findTaskInSubtasks(task, taskId);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    findTaskInSubtasks(task, taskId) {
+        for (const subtask of task.subtasks) {
+            if (subtask.id === taskId) return subtask;
+            const found = this.findTaskInSubtasks(subtask, taskId);
+            if (found) return found;
+        }
+        return null;
     }
 }
 
@@ -4264,7 +4735,46 @@ class TasksManager {
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize with lazy loading for better performance
     window.secondBrain = new SecondBrain();
+    
+    // Add loading indicators for better UX
+    const addLoadingIndicator = () => {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading-indicator';
+        loadingDiv.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Loading...</p>
+            </div>
+        `;
+        loadingDiv.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: white;
+            font-family: var(--font-family);
+        `;
+        document.body.appendChild(loadingDiv);
+        return loadingDiv;
+    };
+
+    // Show loading indicator initially
+    const loadingIndicator = addLoadingIndicator();
+    
+    // Hide loading indicator after a short delay to allow for smooth initialization
+    setTimeout(() => {
+        if (loadingIndicator && loadingIndicator.parentNode) {
+            loadingIndicator.parentNode.removeChild(loadingIndicator);
+        }
+    }, 1000);
 });
 
 // Simple Goals System
@@ -6006,7 +6516,20 @@ class CrmManager {
         this.projects = [];
         this.nextProjectId = 1;
         this.nextTaskId = 1;
+        this.cache = {
+            projects: null,
+            lastUpdated: null,
+            cacheTimeout: 30000 // 30 seconds cache
+        };
+        this.isRendering = false;
         // Note: loadProjects() will be called by initializeCrm() after DOM is ready
+    }
+
+    // Cache management
+    invalidateCache() {
+        this.cache.projects = null;
+        this.cache.lastUpdated = null;
+        console.log('🗑️ CRM cache invalidated');
     }
 
     // Project Management
@@ -6258,6 +6781,12 @@ class CrmManager {
             await this.saveProjects();
             this.renderProjects();
             this.updateStats();
+            
+            // Update completed tasks and productivity calendar
+            if (window.secondBrain && window.secondBrain.completedTasks) {
+                window.secondBrain.completedTasks.invalidateCache();
+                window.secondBrain.completedTasks.loadCompletedTasks(true); // Force reload
+            }
         }
 
         this.hideTaskCompletionModal();
@@ -6397,19 +6926,43 @@ class CrmManager {
 
         if (!projectsList) return;
 
-        if (this.projects.length === 0) {
-            projectsList.innerHTML = '';
-            if (emptyState) {
-                projectsList.appendChild(emptyState);
-            }
+        // Prevent multiple simultaneous renders
+        if (this.isRendering) {
+            console.log('⏳ Render already in progress, skipping...');
             return;
         }
+        this.isRendering = true;
 
-        const projectsHTML = this.projects.map(project => this.renderProject(project)).join('');
-        projectsList.innerHTML = projectsHTML;
+        try {
+            if (this.projects.length === 0) {
+                projectsList.innerHTML = '';
+                if (emptyState) {
+                    projectsList.appendChild(emptyState);
+                }
+                return;
+            }
 
-        // Attach event listeners
-        this.attachProjectEventListeners();
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
+            const tempDiv = document.createElement('div');
+            
+            const projectsHTML = this.projects.map(project => this.renderProject(project)).join('');
+            tempDiv.innerHTML = projectsHTML;
+            
+            // Move all child nodes to fragment
+            while (tempDiv.firstChild) {
+                fragment.appendChild(tempDiv.firstChild);
+            }
+            
+            // Clear and append in one operation
+            projectsList.innerHTML = '';
+            projectsList.appendChild(fragment);
+
+            // Attach event listeners
+            this.attachProjectEventListeners();
+        } finally {
+            this.isRendering = false;
+        }
     }
 
     renderProject(project) {
@@ -6882,36 +7435,57 @@ class CrmManager {
             localStorage.setItem('crm_projects', JSON.stringify(this.projects));
             localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
             localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+            
+            // Invalidate cache after saving
+            this.invalidateCache();
         } catch (error) {
             console.error('Error saving CRM projects:', error);
             // Fallback to local storage
-        localStorage.setItem('crm_projects', JSON.stringify(this.projects));
-        localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
-        localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+            localStorage.setItem('crm_projects', JSON.stringify(this.projects));
+            localStorage.setItem('crm_next_project_id', this.nextProjectId.toString());
+            localStorage.setItem('crm_next_task_id', this.nextTaskId.toString());
+            
+            // Invalidate cache even on error
+            this.invalidateCache();
         }
     }
 
-    async loadProjects() {
+    async loadProjects(forceReload = false) {
         try {
+            // Check cache first
+            if (!forceReload && this.cache.projects && this.cache.lastUpdated) {
+                const now = Date.now();
+                if (now - this.cache.lastUpdated < this.cache.cacheTimeout) {
+                    console.log('📦 Using cached CRM projects data');
+                    this.projects = this.cache.projects;
+                    this.updateNextIds();
+                    return;
+                }
+            }
+
             if (this.firebase && this.firebase.isInitialized) {
-            // Load projects from Firebase
-            const firebaseProjects = await this.firebase.getProjects();
-            if (firebaseProjects && firebaseProjects.length > 0) {
+                // Load projects from Firebase
+                const firebaseProjects = await this.firebase.getProjects();
+                if (firebaseProjects && firebaseProjects.length > 0) {
                     // Filter projects by current user
                     this.projects = firebaseProjects.filter(project => project.userId === this.firebase.userId);
+                    
+                    // Update cache
+                    this.cache.projects = [...this.projects];
+                    this.cache.lastUpdated = Date.now();
                 
-                // Load counters
-                const counters = await this.firebase.getDocument('crm_counters', 'counters');
+                    // Load counters
+                    const counters = await this.firebase.getDocument('crm_counters', 'counters');
                     if (counters && counters.userId === this.firebase.userId) {
-                    this.nextProjectId = counters.nextProjectId || 1;
-                    this.nextTaskId = counters.nextTaskId || 1;
-                } else {
-                    // Calculate next IDs from existing projects
-                    this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
-                    this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
-                }
+                        this.nextProjectId = counters.nextProjectId || 1;
+                        this.nextTaskId = counters.nextTaskId || 1;
+                    } else {
+                        // Calculate next IDs from existing projects
+                        this.nextProjectId = Math.max(...this.projects.map(p => p.id), 0) + 1;
+                        this.nextTaskId = Math.max(...this.projects.flatMap(p => p.tasks.map(t => t.id)), 0) + 1;
+                    }
                     console.log('📊 CRM projects loaded from Firebase:', this.projects.length);
-            } else {
+                } else {
                     // No Firebase data, try local storage
                     this.loadFromLocalStorage();
                 }
@@ -8656,6 +9230,304 @@ class PomodoroManager {
         
         if (breakTimeInput) {
             breakTimeInput.value = Math.floor(this.breakTime / 60);
+        }
+    }
+}
+
+// Productivity Calendar Class
+class ProductivityCalendar {
+    constructor(completedTasksManager, firebaseService = null) {
+        this.completedTasksManager = completedTasksManager;
+        this.firebase = firebaseService;
+        this.currentDate = new Date();
+        this.selectedDate = new Date();
+        this.today = new Date();
+        this.monthNames = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+        this.targetHoursPerDay = 8; // 8 hours = 100% productivity
+    }
+
+    // Calculate productivity percentage based on hours worked
+    calculateProductivity(hoursWorked) {
+        if (hoursWorked <= 0) return 0;
+        return Math.round((hoursWorked / this.targetHoursPerDay) * 100);
+    }
+
+    // Get productivity class for styling
+    getProductivityClass(productivityPercentage) {
+        if (productivityPercentage <= 25) return 'productivity-0-25';
+        if (productivityPercentage <= 50) return 'productivity-26-50';
+        if (productivityPercentage <= 75) return 'productivity-51-75';
+        if (productivityPercentage <= 100) return 'productivity-76-100';
+        return 'productivity-100-plus';
+    }
+
+    // Get completed tasks for a specific date
+    getTasksForDate(date) {
+        const dateString = date.toDateString();
+        return this.completedTasksManager.completedTasks.filter(task => {
+            const taskDate = new Date(task.completedAt).toDateString();
+            return taskDate === dateString;
+        });
+    }
+
+    // Get total hours worked for a specific date
+    getHoursForDate(date) {
+        const tasks = this.getTasksForDate(date);
+        return tasks.reduce((total, task) => total + (task.hoursSpent || 0), 0);
+    }
+
+    // Get productivity data for a specific date
+    getProductivityForDate(date) {
+        const hoursWorked = this.getHoursForDate(date);
+        const productivityPercentage = this.calculateProductivity(hoursWorked);
+        const tasks = this.getTasksForDate(date);
+        
+        return {
+            hoursWorked,
+            productivityPercentage,
+            tasksCount: tasks.length,
+            tasks
+        };
+    }
+
+    // Render the calendar
+    renderCalendar() {
+        const calendarContainer = document.getElementById('productivityCalendarContainer');
+        const calendarDays = document.getElementById('productivityCalendarDays');
+        const monthYear = document.getElementById('productivityCalendarMonthYear');
+        
+        if (!calendarContainer || !calendarDays || !monthYear) return;
+
+        // Update month/year display
+        monthYear.textContent = `${this.monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
+
+        // Clear existing days
+        calendarDays.innerHTML = '';
+
+        // Get first day of month and number of days
+        const firstDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), 1);
+        const lastDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+
+        // Add empty cells for days before the first day of the month
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            const dayElement = this.createDayElement(0, true);
+            calendarDays.appendChild(dayElement);
+        }
+
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dayDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), day);
+            const dayElement = this.createDayElement(day, false, dayDate);
+            calendarDays.appendChild(dayElement);
+        }
+
+        // Add empty cells for days after the last day of the month
+        const totalCells = calendarDays.children.length;
+        const remainingCells = 42 - totalCells; // 6 weeks * 7 days
+        for (let i = 0; i < remainingCells; i++) {
+            const dayElement = this.createDayElement(0, true);
+            calendarDays.appendChild(dayElement);
+        }
+    }
+
+    // Create a day element
+    createDayElement(dayNumber, isOtherMonth, dayDate = null) {
+        const dayElement = document.createElement('div');
+        dayElement.className = 'productivity-calendar-day';
+        dayElement.textContent = dayNumber;
+
+        if (isOtherMonth) {
+            dayElement.classList.add('other-month');
+        } else if (dayDate) {
+            // Check if this is today
+            if (this.isSameDay(dayDate, this.today)) {
+                dayElement.classList.add('today');
+            }
+
+            // Check if this is the selected date
+            if (this.isSameDay(dayDate, this.selectedDate)) {
+                dayElement.classList.add('selected');
+            }
+
+            // Add productivity visualization
+            this.addProductivityToDay(dayElement, dayDate);
+
+            // Add click event
+            dayElement.addEventListener('click', () => {
+                this.selectDate(dayDate);
+                this.showProductivityForDate(dayDate);
+            });
+        }
+
+        return dayElement;
+    }
+
+    // Add productivity visualization to a day
+    addProductivityToDay(dayElement, dayDate) {
+        const productivityData = this.getProductivityForDate(dayDate);
+        
+        if (productivityData.hoursWorked > 0) {
+            const productivityClass = this.getProductivityClass(productivityData.productivityPercentage);
+            dayElement.classList.add(productivityClass);
+            
+            // Add productivity percentage display
+            const percentageElement = document.createElement('div');
+            percentageElement.className = 'productivity-percentage';
+            percentageElement.textContent = `${productivityData.productivityPercentage}%`;
+            dayElement.appendChild(percentageElement);
+            
+            // Add tooltip with productivity info
+            dayElement.title = `${productivityData.hoursWorked}h worked (${productivityData.productivityPercentage}% productivity)`;
+        }
+    }
+
+    // Check if two dates are the same day
+    isSameDay(date1, date2) {
+        return date1.getFullYear() === date2.getFullYear() &&
+               date1.getMonth() === date2.getMonth() &&
+               date1.getDate() === date2.getDate();
+    }
+
+    // Select a date
+    selectDate(date) {
+        this.selectedDate = new Date(date);
+        this.renderCalendar(); // Re-render to update selected state
+    }
+
+    // Navigate to previous month
+    previousMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+        this.renderCalendar();
+    }
+
+    // Navigate to next month
+    nextMonth() {
+        this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+        this.renderCalendar();
+    }
+
+    // Show productivity details for a specific date
+    showProductivityForDate(date) {
+        const modal = document.getElementById('dailyProductivityModal');
+        const modalDate = document.getElementById('productivityModalDate');
+        const productivityPercentage = document.getElementById('productivityPercentage');
+        const totalHoursWorked = document.getElementById('totalHoursWorked');
+        const tasksCompleted = document.getElementById('tasksCompleted');
+        const completedTasksForDay = document.getElementById('completedTasksForDay');
+
+        if (!modal || !modalDate || !productivityPercentage || !totalHoursWorked || !tasksCompleted || !completedTasksForDay) return;
+
+        // Update modal date
+        const dateOptions = { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        modalDate.textContent = date.toLocaleDateString('en-US', dateOptions);
+
+        // Get productivity data
+        const productivityData = this.getProductivityForDate(date);
+
+        // Update metrics
+        productivityPercentage.textContent = `${productivityData.productivityPercentage}%`;
+        totalHoursWorked.textContent = `${productivityData.hoursWorked}h`;
+        tasksCompleted.textContent = productivityData.tasksCount;
+
+        // Display tasks for the day
+        if (productivityData.tasks.length === 0) {
+            completedTasksForDay.innerHTML = '<p style="text-align: center; color: var(--color-gray-600); padding: 1rem;">No tasks completed on this day.</p>';
+        } else {
+            const tasksHTML = productivityData.tasks.map(task => `
+                <div class="task-item-for-day">
+                    <div class="task-name-for-day">${task.name}</div>
+                    <div class="task-hours-for-day">${task.hoursSpent}h</div>
+                </div>
+            `).join('');
+            completedTasksForDay.innerHTML = `<h4>Completed Tasks</h4>${tasksHTML}`;
+        }
+
+        // Show modal
+        modal.classList.add('open');
+    }
+
+    // Hide productivity modal
+    hideProductivityModal() {
+        const modal = document.getElementById('dailyProductivityModal');
+        if (modal) {
+            modal.classList.remove('open');
+        }
+    }
+
+    // Setup event listeners
+    setupEventListeners() {
+        // View toggle buttons
+        const listViewBtn = document.getElementById('listViewBtn');
+        const calendarViewBtn = document.getElementById('calendarViewBtn');
+        const calendarContainer = document.getElementById('productivityCalendarContainer');
+        const tasksList = document.getElementById('completedTasksList');
+
+        if (listViewBtn && calendarViewBtn && calendarContainer && tasksList) {
+            listViewBtn.addEventListener('click', () => {
+                listViewBtn.classList.add('active');
+                calendarViewBtn.classList.remove('active');
+                calendarContainer.style.display = 'none';
+                tasksList.style.display = 'block';
+            });
+
+            calendarViewBtn.addEventListener('click', () => {
+                calendarViewBtn.classList.add('active');
+                listViewBtn.classList.remove('active');
+                calendarContainer.style.display = 'block';
+                tasksList.style.display = 'none';
+                this.renderCalendar();
+            });
+        }
+
+        // Calendar navigation
+        const prevMonthBtn = document.getElementById('prevMonthProductivity');
+        const nextMonthBtn = document.getElementById('nextMonthProductivity');
+
+        if (prevMonthBtn) {
+            prevMonthBtn.addEventListener('click', () => this.previousMonth());
+        }
+
+        if (nextMonthBtn) {
+            nextMonthBtn.addEventListener('click', () => this.nextMonth());
+        }
+
+        // Modal close button
+        const modalCloseBtn = document.getElementById('dailyProductivityModalClose');
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', () => this.hideProductivityModal());
+        }
+
+        // Close modal when clicking outside
+        const modal = document.getElementById('dailyProductivityModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.hideProductivityModal();
+                }
+            });
+        }
+    }
+
+    // Initialize the productivity calendar
+    initialize() {
+        this.setupEventListeners();
+        // Calendar will be rendered when user switches to calendar view
+    }
+
+    // Update calendar when completed tasks change
+    updateCalendar() {
+        if (document.getElementById('productivityCalendarContainer').style.display !== 'none') {
+            this.renderCalendar();
         }
     }
 }
