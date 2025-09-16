@@ -111,6 +111,11 @@ class FirebaseService {
         if (!this.isInitialized) return this.setToLocalStorage(collection, docId, data);
         
         try {
+            // Show server activity
+            if (window.secondBrain) {
+                window.secondBrain.showServerActivity('Saving to cloud...');
+            }
+            
             const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const docRef = doc(this.db, collection, docId);
             
@@ -127,9 +132,21 @@ class FirebaseService {
             // Also save to local storage as backup
             this.setToLocalStorage(collection, docId, data);
             
+            // Hide server activity
+            if (window.secondBrain) {
+                setTimeout(() => window.secondBrain.hideServerActivity(), 500);
+            }
+            
             return true;
         } catch (error) {
             console.error('Error setting document:', error);
+            
+            // Show server error
+            if (window.secondBrain) {
+                window.secondBrain.showServerError('Save failed');
+                setTimeout(() => window.secondBrain.hideServerActivity(), 2000);
+            }
+            
             // Fallback to local storage
             return this.setToLocalStorage(collection, docId, data);
         }
@@ -139,6 +156,11 @@ class FirebaseService {
         if (!this.isInitialized) return this.getFromLocalStorage(collection);
         
         try {
+            // Show server activity
+            if (window.secondBrain) {
+                window.secondBrain.showServerActivity('Loading from cloud...');
+            }
+            
             const { collection: firestoreCollection, query, where, getDocs } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             const collectionRef = firestoreCollection(this.db, collection);
             
@@ -161,9 +183,21 @@ class FirebaseService {
                 return dateB - dateA; // Newest first
             });
             
+            // Hide server activity
+            if (window.secondBrain) {
+                setTimeout(() => window.secondBrain.hideServerActivity(), 500);
+            }
+            
             return documents;
         } catch (error) {
             console.error('Error getting collection:', error);
+            
+            // Show server error
+            if (window.secondBrain) {
+                window.secondBrain.showServerError('Load failed');
+                setTimeout(() => window.secondBrain.hideServerActivity(), 2000);
+            }
+            
             return this.getFromLocalStorage(collection);
         }
     }
@@ -587,6 +621,7 @@ class SecondBrain {
         this.mainContent = document.getElementById('mainContent');
         this.navLinks = document.querySelectorAll('.nav-link');
         this.currentModule = 'dashboard';
+        this.serverIndicator = document.getElementById('serverIndicator');
         
         // Calendar properties
         this.calendar = null;
@@ -663,7 +698,7 @@ class SecondBrain {
         // Initialize Goals if we're starting on the Goals module
         if (this.currentModule === 'goals') {
             setTimeout(async () => {
-                await initializeGoals();
+                await this.initializeGoals();
             }, 100);
         }
 
@@ -903,7 +938,7 @@ class SecondBrain {
         // Initialize Goals if switching to Goals module
         if (moduleName === 'goals') {
             setTimeout(async () => {
-                await initializeGoals();
+                await this.initializeGoals();
             }, 100);
         }
 
@@ -956,13 +991,20 @@ class SecondBrain {
 
         if (!contentTitle || !contentSubtitle || !contentBody) return;
 
+        // Special handling for dashboard - don't replace content since it's already in HTML
+        if (moduleName === 'dashboard') {
+            contentTitle.textContent = 'Dashboard';
+            contentSubtitle.textContent = 'Welcome to your Second Brain';
+            // Don't replace contentBody.innerHTML for dashboard
+            // Initialize dashboard widgets if not already done
+            if (window.dashboardWidgets) {
+                window.dashboardWidgets.updateEmptyState();
+            }
+            return;
+        }
+
         // Module configurations
         const modules = {
-            dashboard: {
-                title: 'Dashboard',
-                subtitle: 'Welcome to your Second Brain',
-                content: this.getDashboardContent()
-            },
             notes: {
                 title: 'Notes',
                 subtitle: 'Capture and organize your thoughts',
@@ -1049,54 +1091,9 @@ class SecondBrain {
     }
 
     getDashboardContent() {
-        return `
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Quick Stats</h3>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Notes</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Tasks</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Bookmarks</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="dashboard-card">
-                    <h3>Recent Activity</h3>
-                    <div class="activity-list">
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14,2 14,8 20,8"></polyline>
-                                </svg>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-text">Welcome to Second Brain</p>
-                                <span class="activity-time">Just now</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="dashboard-card">
-                    <h3>Quick Actions</h3>
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="secondBrain.switchModule('notes')">New Note</button>
-                        <button class="btn btn-secondary" onclick="secondBrain.switchModule('tasks')">Add Task</button>
-                        <button class="btn btn-secondary" onclick="secondBrain.switchModule('bookmarks')">Bookmark</button>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Return empty string since the dashboard content is now in the HTML
+        // The new dashboard widgets system will handle the content
+        return '';
     }
 
     getNotesContent() {
@@ -1386,13 +1383,18 @@ class SecondBrain {
             <div class="crm-container">
                 <div class="crm-header">
                     <h2 class="crm-title">Project & Task Management</h2>
-                    <button class="btn btn-primary" id="addProjectBtn">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        New Project
-                    </button>
+                    <div class="crm-header-actions">
+                        <div class="mobile-info" style="display: none; font-size: 0.875rem; color: var(--color-gray-600); margin-right: 1rem;">
+                            📱 Mobile: Switch between Tree & Flat views for better task navigation
+                        </div>
+                        <button class="btn btn-primary" id="addProjectBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            New Project
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="crm-stats" id="crmStats">
@@ -2792,7 +2794,7 @@ class SecondBrain {
             } else if (this.currentModule === 'tasks') {
                 await this.initializeTasks();
             } else if (this.currentModule === 'goals') {
-                await initializeGoals();
+                await this.initializeGoals();
             }
             
             // Update auth status
@@ -3061,6 +3063,16 @@ class SecondBrain {
         console.log('✅ Tasks module initialized successfully');
     }
 
+    async initializeGoals() {
+        console.log('🔄 Initializing Goals module...');
+        this.goals = new GoalsManager(this.firebase);
+        await this.goals.loadGoals();
+        this.goals.renderGoals();
+        this.goals.updateStats();
+        this.setupGoalsEventListeners();
+        console.log('✅ Goals module initialized successfully');
+    }
+
     setupTasksEventListeners() {
         const addTaskBtn = document.getElementById('addTaskBtn');
         const taskFilter = document.getElementById('taskFilter');
@@ -3085,6 +3097,16 @@ class SecondBrain {
             }, 300) : () => this.tasks.searchTasks();
             
             searchTasks.addEventListener('input', debouncedSearch);
+        }
+    }
+
+    setupGoalsEventListeners() {
+        const addGoalBtn = document.getElementById('addGoalBtn');
+
+        if (addGoalBtn) {
+            addGoalBtn.addEventListener('click', () => {
+                this.goals.showAddGoalModal();
+            });
         }
     }
 
@@ -3159,6 +3181,99 @@ class SecondBrain {
     }
 
     // Goals Methods - Using simple global functions
+
+    // ========================================
+    // SERVER INDICATOR METHODS
+    // ========================================
+
+    showServerActivity(message = 'Syncing...') {
+        if (this.serverIndicator) {
+            this.serverIndicator.classList.remove('error', 'offline');
+            this.serverIndicator.classList.add('active');
+            this.serverIndicator.setAttribute('data-status', message);
+        }
+    }
+
+    hideServerActivity() {
+        if (this.serverIndicator) {
+            this.serverIndicator.classList.remove('active');
+            this.serverIndicator.setAttribute('data-status', 'Connected');
+        }
+    }
+
+    showServerError(message = 'Connection Error') {
+        if (this.serverIndicator) {
+            this.serverIndicator.classList.remove('active', 'offline');
+            this.serverIndicator.classList.add('error');
+            this.serverIndicator.setAttribute('data-status', message);
+        }
+    }
+
+    showServerOffline() {
+        if (this.serverIndicator) {
+            this.serverIndicator.classList.remove('active', 'error');
+            this.serverIndicator.classList.add('offline');
+            this.serverIndicator.setAttribute('data-status', 'Offline');
+        }
+    }
+
+    // Enhanced save notification with server indicator
+    showSaveNotification(message, type = 'success') {
+        // Show server activity
+        this.showServerActivity('Saving...');
+        
+        // Create notification
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        
+        // Style the notification
+        Object.assign(notification.style, {
+            position: 'fixed',
+            top: '80px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            color: 'white',
+            fontWeight: '500',
+            zIndex: '10000',
+            transform: 'translateX(100%)',
+            transition: 'transform 0.3s ease',
+            maxWidth: '300px',
+            wordWrap: 'break-word'
+        });
+
+        // Set background color based on type
+        if (type === 'success') {
+            notification.style.backgroundColor = '#10b981';
+        } else if (type === 'error') {
+            notification.style.backgroundColor = '#ef4444';
+        } else {
+            notification.style.backgroundColor = '#6b7280';
+        }
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Hide server activity after a delay
+        setTimeout(() => {
+            this.hideServerActivity();
+        }, 1000);
+
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
 }
 
 // Completed Tasks Manager
@@ -4780,16 +4895,17 @@ document.addEventListener('DOMContentLoaded', () => {
 // Simple Goals System
 let goals = [];
 
-async function initializeGoals() {
-    console.log('🔄 Initializing Goals module...');
-    const addBtn = document.getElementById('addGoalBtn');
-    if (addBtn) {
-        addBtn.onclick = addGoal;
-    }
-    await loadGoals();
-    displayGoals();
-    console.log('✅ Goals module initialized successfully');
-}
+// Old function-based goals system - now using GoalsManager class
+// async function initializeGoals() {
+//     console.log('🔄 Initializing Goals module...');
+//     const addBtn = document.getElementById('addGoalBtn');
+//     if (addBtn) {
+//         addBtn.onclick = addGoal;
+//     }
+//     await loadGoals();
+//     displayGoals();
+//     console.log('✅ Goals module initialized successfully');
+// }
 
 async function loadGoals() {
     try {
@@ -4848,74 +4964,76 @@ async function saveGoals() {
     }
 }
 
-async function addGoal() {
-    const name = prompt('Enter goal name:');
-    if (!name) return;
-    
-    const target = prompt('Enter target amount (₹):');
-    if (!target) return;
-    
-    const targetDate = prompt('Enter target date (YYYY-MM-DD):', new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-    if (!targetDate) return;
-    
-    const goal = {
-        id: Date.now(),
-        name: name,
-        target: parseFloat(target),
-        current: 0,
-        targetDate: targetDate,
-        image: null,
-        date: new Date().toLocaleDateString(),
-        userId: window.secondBrain && window.secondBrain.firebase ? window.secondBrain.firebase.userId : 'anonymous_user',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    
-    goals.push(goal);
-    await saveGoals();
-    
-    // Log the activity
-    logActivity('Goals', 'Added', `Created new goal: "${name}" with target amount ₹${target}`);
-    
-    displayGoals();
-}
+// Old function-based addGoal - now using GoalsManager class
+// async function addGoal() {
+//     const name = prompt('Enter goal name:');
+//     if (!name) return;
+//     
+//     const target = prompt('Enter target amount (₹):');
+//     if (!target) return;
+//     
+//     const targetDate = prompt('Enter target date (YYYY-MM-DD):', new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+//     if (!targetDate) return;
+//     
+//     const goal = {
+//         id: Date.now(),
+//         name: name,
+//         target: parseFloat(target),
+//         current: 0,
+//         targetDate: targetDate,
+//         image: null,
+//         date: new Date().toLocaleDateString(),
+//         userId: window.secondBrain && window.secondBrain.firebase ? window.secondBrain.firebase.userId : 'anonymous_user',
+//         createdAt: new Date().toISOString(),
+//         updatedAt: new Date().toISOString()
+//     };
+//     
+//     goals.push(goal);
+//     await saveGoals();
+//     
+//     // Log the activity
+//     logActivity('Goals', 'Added', `Created new goal: "${name}" with target amount ₹${target}`);
+//     
+//     displayGoals();
+// }
 
-function displayGoals() {
-    const list = document.getElementById('goalsList');
-    if (!list) return;
-    
-    if (goals.length === 0) {
-        list.innerHTML = '<p>No goals yet. Click "New Goal" to get started!</p>';
-        return;
-    }
-    
-    list.innerHTML = goals.map(goal => {
-        const progress = (goal.current / goal.target) * 100;
-        const countdown = getCountdown(goal.targetDate);
-        const imageHtml = goal.image ? `<img src="${goal.image}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 5px; margin: 10px 0;" onclick="showFullImage('${goal.image}')">` : '';
-        
-        return `
-            <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; gap: 15px;">
-                <div style="flex: 1;">
-                    ${imageHtml}
-                    <h3>${goal.name}</h3>
-                    <p><strong>Target:</strong> ₹${goal.target.toLocaleString('en-IN')}</p>
-                    <p><strong>Current:</strong> ₹${goal.current.toLocaleString('en-IN')}</p>
-                    <p><strong>Time Left:</strong> <span style="color: #000000">${countdown.text}</span></p>
-                    <div style="background: #f0f0f0; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0;">
-                        <div style="background: #000000; height: 100%; width: ${Math.min(progress, 100)}%; transition: width 0.3s;"></div>
-                    </div>
-                    <p><strong>Progress:</strong> ${Math.round(progress)}%</p>
-                    <div style="margin-top: 10px;">
-                        <button onclick="updateGoal(${goal.id})" style="margin-right: 10px; padding: 5px 10px;">Update Amount</button>
-                        <button onclick="addImage(${goal.id})" style="margin-right: 10px; padding: 5px 10px; background: #000000; color: white;">Add Image</button>
-                        <button onclick="deleteGoal(${goal.id})" style="background: #000000; color: white; padding: 5px 10px;">Delete</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+// Old function-based displayGoals - now using GoalsManager class
+// function displayGoals() {
+//     const list = document.getElementById('goalsList');
+//     if (!list) return;
+//     
+//     if (goals.length === 0) {
+//         list.innerHTML = '<p>No goals yet. Click "New Goal" to get started!</p>';
+//         return;
+//     }
+//     
+//     list.innerHTML = goals.map(goal => {
+//         const progress = (goal.current / goal.target) * 100;
+//         const countdown = getCountdown(goal.targetDate);
+//         const imageHtml = goal.image ? `<img src="${goal.image}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 5px; margin: 10px 0;" onclick="showFullImage('${goal.image}')">` : '';
+//         
+//         return `
+//             <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; display: flex; gap: 15px;">
+//                 <div style="flex: 1;">
+//                     ${imageHtml}
+//                     <h3>${goal.name}</h3>
+//                     <p><strong>Target:</strong> ₹${goal.target.toLocaleString('en-IN')}</p>
+//                     <p><strong>Current:</strong> ₹${goal.current.toLocaleString('en-IN')}</p>
+//                     <p><strong>Time Left:</strong> <span style="color: #000000">${countdown.text}</span></p>
+//                     <div style="background: #f0f0f0; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0;">
+//                         <div style="background: #000000; height: 100%; width: ${Math.min(progress, 100)}%; transition: width 0.3s;"></div>
+//                     </div>
+//                     <p><strong>Progress:</strong> ${Math.round(progress)}%</p>
+//                     <div style="margin-top: 10px;">
+//                         <button onclick="updateGoal(${goal.id})" style="margin-right: 10px; padding: 5px 10px;">Update Amount</button>
+//                         <button onclick="addImage(${goal.id})" style="margin-right: 10px; padding: 5px 10px; background: #000000; color: white;">Add Image</button>
+//                         <button onclick="deleteGoal(${goal.id})" style="background: #000000; color: white; padding: 5px 10px;">Delete</button>
+//                     </div>
+//                 </div>
+//             </div>
+//         `;
+//     }).join('');
+// }
 
 async function updateGoal(id) {
     const goal = goals.find(g => g.id === id);
@@ -6960,6 +7078,9 @@ class CrmManager {
 
             // Attach event listeners
             this.attachProjectEventListeners();
+            
+            // Initialize mobile view if on mobile
+            this.initializeMobileView();
         } finally {
             this.isRendering = false;
         }
@@ -7098,12 +7219,16 @@ class CrmManager {
             </div>
         ` : '';
 
+        // Mobile level indicator
+        const levelIndicator = `<span class="task-level-indicator">L${level}</span>`;
+
         return `
             <div class="task-item level-${level} ${task.completed ? 'completed' : ''}" data-task-id="${task.id}">
                 <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
                      onclick="window.secondBrain.crm.toggleTask(${projectId}, ${task.id}).catch(console.error)"></div>
                 <div class="task-content">
                     <div class="task-header">
+                        ${levelIndicator}
                         <h5 class="task-name">${task.name}</h5>
                         <div class="task-actions">
                             ${hasSubtasks ? `
@@ -7159,6 +7284,236 @@ class CrmManager {
     attachProjectEventListeners() {
         // Event listeners are attached via onclick attributes in the HTML
         // This method can be used for additional event listeners if needed
+    }
+
+    // Mobile View Methods
+    initializeMobileView() {
+        if (window.innerWidth <= 768) {
+            this.setupMobileView();
+        }
+        
+        // Add resize listener for mobile view
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 768) {
+                this.setupMobileView();
+            } else {
+                // Remove mobile controls on desktop
+                const mobileControls = document.querySelectorAll('.mobile-controls');
+                mobileControls.forEach(control => control.remove());
+                
+                // Remove mobile view classes
+                const tasksLists = document.querySelectorAll('.tasks-list');
+                tasksLists.forEach(list => {
+                    list.classList.remove('mobile-tree-view', 'mobile-flat-view');
+                });
+            }
+        });
+    }
+
+    setupMobileView() {
+        // Add mobile view toggle to each project
+        const projects = document.querySelectorAll('.project-card');
+        projects.forEach(project => {
+            const tasksList = project.querySelector('.tasks-list');
+            if (tasksList && !tasksList.querySelector('.mobile-view-toggle')) {
+                const mobileControls = this.createMobileControls();
+                tasksList.insertBefore(mobileControls, tasksList.firstChild);
+            }
+        });
+    }
+
+    createMobileControls() {
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'mobile-controls';
+        controlsDiv.innerHTML = `
+            <div class="mobile-view-toggle">
+                <button class="mobile-view-btn active" data-view="tree" onclick="window.secondBrain.crm.switchMobileView('tree', this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                    Tree View
+                </button>
+                <button class="mobile-view-btn" data-view="flat" onclick="window.secondBrain.crm.switchMobileView('flat', this)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                    Flat View
+                </button>
+            </div>
+            <div class="mobile-task-filter">
+                <button class="mobile-filter-btn active" data-filter="all" onclick="window.secondBrain.crm.filterMobileTasks('all', this)">All</button>
+                <button class="mobile-filter-btn" data-filter="pending" onclick="window.secondBrain.crm.filterMobileTasks('pending', this)">Pending</button>
+                <button class="mobile-filter-btn" data-filter="completed" onclick="window.secondBrain.crm.filterMobileTasks('completed', this)">Completed</button>
+            </div>
+        `;
+        return controlsDiv;
+    }
+
+    switchMobileView(viewType, button) {
+        // Update button states
+        const buttons = button.parentElement.querySelectorAll('.mobile-view-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Find the tasks list container
+        const tasksList = button.closest('.project-card').querySelector('.tasks-list');
+        if (!tasksList) return;
+
+        // Remove existing view classes
+        tasksList.classList.remove('mobile-tree-view', 'mobile-flat-view');
+        
+        if (viewType === 'tree') {
+            tasksList.classList.add('mobile-tree-view');
+            this.renderMobileTreeView(tasksList);
+        } else {
+            tasksList.classList.add('mobile-flat-view');
+            this.renderMobileFlatView(tasksList);
+        }
+    }
+
+    renderMobileTreeView(tasksList) {
+        // Tree view is the default, just ensure proper classes
+        const taskItems = tasksList.querySelectorAll('.task-item');
+        taskItems.forEach(item => {
+            item.style.display = '';
+        });
+    }
+
+    renderMobileFlatView(tasksList) {
+        // Collect all tasks from all levels
+        const allTasks = [];
+        const taskItems = tasksList.querySelectorAll('.task-item');
+        
+        taskItems.forEach(item => {
+            const level = parseInt(item.className.match(/level-(\d+)/)?.[1] || '1');
+            const taskId = item.dataset.taskId;
+            const taskName = item.querySelector('.task-name').textContent;
+            const taskDescription = item.querySelector('.task-description').textContent;
+            const taskPrice = item.querySelector('.task-price')?.textContent || '';
+            const isCompleted = item.classList.contains('completed');
+            
+            allTasks.push({
+                id: taskId,
+                level: level,
+                name: taskName,
+                description: taskDescription,
+                price: taskPrice,
+                completed: isCompleted,
+                element: item
+            });
+        });
+
+        // Sort by level, then by original order
+        allTasks.sort((a, b) => {
+            if (a.level !== b.level) return a.level - b.level;
+            return Array.from(taskItems).indexOf(a.element) - Array.from(taskItems).indexOf(b.element);
+        });
+
+        // Hide all original task items
+        taskItems.forEach(item => {
+            item.style.display = 'none';
+        });
+
+        // Create flat view container if it doesn't exist
+        let flatContainer = tasksList.querySelector('.mobile-flat-view');
+        if (!flatContainer) {
+            flatContainer = document.createElement('div');
+            flatContainer.className = 'mobile-flat-view show';
+            tasksList.appendChild(flatContainer);
+        } else {
+            flatContainer.innerHTML = '';
+        }
+
+        // Render tasks in flat view
+        allTasks.forEach(task => {
+            const taskElement = this.createFlatTaskElement(task);
+            flatContainer.appendChild(taskElement);
+        });
+    }
+
+    createFlatTaskElement(task) {
+        const div = document.createElement('div');
+        div.className = `task-item level-${task.level} ${task.completed ? 'completed' : ''}`;
+        div.dataset.taskId = task.id;
+        
+        div.innerHTML = `
+            <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                 onclick="window.secondBrain.crm.toggleTask(${this.getProjectIdFromTask(task.id)}, ${task.id}).catch(console.error)"></div>
+            <div class="task-content">
+                <div class="task-header">
+                    <span class="task-level-indicator">L${task.level}</span>
+                    <h5 class="task-name">${task.name}</h5>
+                    <div class="task-actions">
+                        <button class="task-action-btn" onclick="window.secondBrain.crm.showEditTaskModal(${this.getProjectIdFromTask(task.id)}, ${task.id})" title="Edit Task">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="task-action-btn" onclick="window.secondBrain.crm.deleteTask(${this.getProjectIdFromTask(task.id)}, ${task.id}).catch(console.error)" title="Delete Task">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <p class="task-description">${task.description}</p>
+                ${task.price ? `<div class="task-price">${task.price}</div>` : ''}
+            </div>
+        `;
+        
+        return div;
+    }
+
+    getProjectIdFromTask(taskId) {
+        // Find which project this task belongs to
+        const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+        if (taskElement) {
+            const projectCard = taskElement.closest('.project-card');
+            if (projectCard) {
+                return projectCard.dataset.projectId;
+            }
+        }
+        return null;
+    }
+
+    filterMobileTasks(filter, button) {
+        // Update button states
+        const buttons = button.parentElement.querySelectorAll('.mobile-filter-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+
+        // Find the tasks container
+        const tasksContainer = button.closest('.project-card').querySelector('.tasks-list');
+        if (!tasksContainer) return;
+
+        const taskItems = tasksContainer.querySelectorAll('.task-item');
+        
+        taskItems.forEach(item => {
+            const isCompleted = item.classList.contains('completed');
+            let shouldShow = true;
+            
+            switch (filter) {
+                case 'pending':
+                    shouldShow = !isCompleted;
+                    break;
+                case 'completed':
+                    shouldShow = isCompleted;
+                    break;
+                case 'all':
+                default:
+                    shouldShow = true;
+                    break;
+            }
+            
+            item.style.display = shouldShow ? '' : 'none';
+        });
     }
 
     // Modal Management
@@ -8303,6 +8658,11 @@ class GoalsManager {
 
         // Attach event listeners
         this.attachGoalEventListeners();
+        
+        // Start countdown timers for all goals
+        this.goals.forEach(goal => {
+            this.startCountdown(goal.id);
+        });
     }
 
     renderGoal(goal) {
@@ -9531,6 +9891,961 @@ class ProductivityCalendar {
         }
     }
 }
+
+// ========================================
+// DASHBOARD WIDGET SYSTEM
+// ========================================
+
+class DashboardWidgets {
+    constructor() {
+        this.widgets = [];
+        this.widgetIdCounter = 0;
+        this.init();
+    }
+
+    init() {
+        this.setupEventListeners();
+        this.loadWidgets();
+    }
+
+    setupEventListeners() {
+        // Add widget button
+        const addWidgetBtn = document.getElementById('addWidgetBtn');
+        const addFirstWidgetBtn = document.getElementById('addFirstWidgetBtn');
+        
+        if (addWidgetBtn) {
+            addWidgetBtn.addEventListener('click', () => this.showWidgetSelectionModal());
+        }
+        
+        if (addFirstWidgetBtn) {
+            addFirstWidgetBtn.addEventListener('click', () => this.showWidgetSelectionModal());
+        }
+
+        // Widget selection modal
+        const widgetSelectionModal = document.getElementById('widgetSelectionModal');
+        const widgetSelectionModalClose = document.getElementById('widgetSelectionModalClose');
+        const cancelWidgetSelection = document.getElementById('cancelWidgetSelection');
+
+        if (widgetSelectionModalClose) {
+            widgetSelectionModalClose.addEventListener('click', () => this.hideWidgetSelectionModal());
+        }
+
+        if (cancelWidgetSelection) {
+            cancelWidgetSelection.addEventListener('click', () => this.hideWidgetSelectionModal());
+        }
+
+        // Close modal when clicking outside
+        if (widgetSelectionModal) {
+            widgetSelectionModal.addEventListener('click', (e) => {
+                if (e.target === widgetSelectionModal) {
+                    this.hideWidgetSelectionModal();
+                }
+            });
+        }
+
+        // Widget option clicks
+        const widgetOptions = document.querySelectorAll('.widget-option');
+        widgetOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const widgetType = option.dataset.widget;
+                this.addWidget(widgetType);
+                this.hideWidgetSelectionModal();
+            });
+        });
+    }
+
+    showWidgetSelectionModal() {
+        const modal = document.getElementById('widgetSelectionModal');
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    hideWidgetSelectionModal() {
+        const modal = document.getElementById('widgetSelectionModal');
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+    addWidget(widgetType) {
+        const widgetId = `widget_${++this.widgetIdCounter}`;
+        const widget = {
+            id: widgetId,
+            type: widgetType,
+            title: this.getWidgetTitle(widgetType),
+            icon: this.getWidgetIcon(widgetType),
+            data: this.getWidgetData(widgetType),
+            size: 'medium', // Default size
+            position: this.widgets.length // Position in the grid
+        };
+
+        this.widgets.push(widget);
+        this.renderWidget(widget);
+        this.updateEmptyState();
+        this.saveWidgets();
+    }
+
+    getWidgetTitle(widgetType) {
+        const titles = {
+            'notes-recent': 'Recent Notes',
+            'notes-stats': 'Notes Statistics',
+            'tasks-today': "Today's Tasks",
+            'tasks-overdue': 'Overdue Tasks',
+            'tasks-completed': 'Completed Tasks',
+            'calendar-mini': 'Mini Calendar',
+            'calendar-upcoming': 'Upcoming Events',
+            'habits-streak': 'Habit Streaks',
+            'wallet-balance': 'Wallet Balance',
+            'wallet-transactions': 'Recent Transactions',
+            'wallet-summary': 'Income vs Expense',
+            'goals-progress': 'Goal Progress',
+            'goals-achievements': 'Recent Achievements',
+            'crm-projects': 'Active Projects',
+            'crm-revenue': 'Revenue Tracker',
+            'pomodoro-timer': 'Pomodoro Timer',
+            'daily-summary': 'Daily Summary',
+            'focus-time': 'Focus Time',
+            'quick-notes': 'Quick Notes',
+            'time-weather': 'Time & Weather',
+            'bookmark-shortcuts': 'Bookmark Shortcuts',
+            'analytics-productivity': 'Productivity Chart'
+        };
+        return titles[widgetType] || 'Widget';
+    }
+
+    getWidgetIcon(widgetType) {
+        const icons = {
+            'notes-recent': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+            </svg>`,
+            'notes-stats': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>`,
+            'tasks-today': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>`,
+            'tasks-overdue': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>`,
+            'tasks-completed': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12l2 2 4-4"></path>
+                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+            </svg>`,
+            'calendar-mini': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>`,
+            'calendar-upcoming': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>`,
+            'habits-streak': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+            </svg>`,
+            'wallet-balance': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+            </svg>`,
+            'wallet-transactions': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>`,
+            'wallet-summary': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>`,
+            'goals-progress': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>`,
+            'goals-achievements': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+            </svg>`,
+            'crm-projects': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>`,
+            'crm-revenue': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>`,
+            'pomodoro-timer': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>`,
+            'daily-summary': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>`,
+            'focus-time': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M12 6v6l4 2"></path>
+            </svg>`,
+            'quick-notes': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14,2 14,8 20,8"></polyline>
+            </svg>`,
+            'time-weather': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12,6 12,12 16,14"></polyline>
+            </svg>`,
+            'bookmark-shortcuts': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>`,
+            'analytics-productivity': `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 20V10"></path>
+                <path d="M12 20V4"></path>
+                <path d="M6 20v-6"></path>
+            </svg>`
+        };
+        return icons[widgetType] || '';
+    }
+
+    getWidgetData(widgetType) {
+        // This would be populated with actual data from the respective modules
+        // For now, return placeholder data
+        const data = {
+            'notes-recent': { notes: [], count: 0 },
+            'notes-stats': { total: 0, thisWeek: 0, growth: 0 },
+            'tasks-today': { tasks: [], completed: 0, total: 0 },
+            'tasks-overdue': { tasks: [], count: 0 },
+            'tasks-completed': { tasks: [], count: 0, hours: 0 },
+            'calendar-mini': { events: [], currentDate: new Date() },
+            'calendar-upcoming': { events: [], count: 0 },
+            'habits-streak': { habits: [], totalStreaks: 0 },
+            'wallet-balance': { balance: 0, currency: '₹', transactions: [] },
+            'wallet-transactions': { transactions: [], count: 0 },
+            'wallet-summary': { income: 0, expense: 0, net: 0 },
+            'goals-progress': { goals: [], completed: 0, total: 0 },
+            'goals-achievements': { achievements: [], count: 0 },
+            'crm-projects': { projects: [], active: 0, completed: 0 },
+            'crm-revenue': { monthly: 0, total: 0, clients: 0 },
+            'pomodoro-timer': { sessions: 0, focusTime: 0, isRunning: false },
+            'daily-summary': { tasksCompleted: 0, hoursWorked: 0, productivity: 0 },
+            'focus-time': { today: 0, thisWeek: 0, streak: 0 },
+            'quick-notes': { notes: [], recent: [] },
+            'time-weather': { time: new Date(), weather: 'Sunny', temp: '24°C' },
+            'bookmark-shortcuts': { bookmarks: [], favorites: [] },
+            'analytics-productivity': { chartData: [], productivity: 0 }
+        };
+        return data[widgetType] || {};
+    }
+
+    renderWidget(widget) {
+        const widgetGrid = document.getElementById('widgetGrid');
+        if (!widgetGrid) return;
+
+        const widgetElement = document.createElement('div');
+        widgetElement.className = `widget-card size-${widget.size || 'medium'}`;
+        widgetElement.dataset.widgetId = widget.id;
+        widgetElement.draggable = true;
+        widgetElement.innerHTML = `
+            <div class="widget-drag-handle" title="Drag to move"></div>
+            <div class="widget-card-header">
+                <div class="widget-card-title">
+                    ${widget.icon}
+                    ${widget.title}
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-control" onclick="dashboardWidgets.toggleSizeSelector('${widget.id}')" title="Resize Widget">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                        </svg>
+                        <div class="widget-size-selector" id="sizeSelector_${widget.id}">
+                            <div class="widget-size-option ${widget.size === 'small' ? 'active' : ''}" onclick="dashboardWidgets.resizeWidget('${widget.id}', 'small')">
+                                <div class="widget-size-indicator small"></div>
+                                Small
+                            </div>
+                            <div class="widget-size-option ${widget.size === 'medium' ? 'active' : ''}" onclick="dashboardWidgets.resizeWidget('${widget.id}', 'medium')">
+                                <div class="widget-size-indicator medium"></div>
+                                Medium
+                            </div>
+                            <div class="widget-size-option ${widget.size === 'large' ? 'active' : ''}" onclick="dashboardWidgets.resizeWidget('${widget.id}', 'large')">
+                                <div class="widget-size-indicator large"></div>
+                                Large
+                            </div>
+                            <div class="widget-size-option ${widget.size === 'extra-large' ? 'active' : ''}" onclick="dashboardWidgets.resizeWidget('${widget.id}', 'extra-large')">
+                                <div class="widget-size-indicator extra-large"></div>
+                                Extra Large
+                            </div>
+                        </div>
+                    </button>
+                    <button class="widget-control" onclick="dashboardWidgets.removeWidget('${widget.id}')" title="Remove Widget">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="widget-card-content">
+                ${this.renderWidgetContent(widget)}
+            </div>
+        `;
+
+        // Add drag and drop event listeners
+        this.setupWidgetDragAndDrop(widgetElement);
+        
+        widgetGrid.appendChild(widgetElement);
+    }
+
+    renderWidgetContent(widget) {
+        switch (widget.type) {
+            case 'notes-recent':
+                return this.renderNotesRecentWidget(widget.data);
+            case 'notes-stats':
+                return this.renderNotesStatsWidget(widget.data);
+            case 'tasks-today':
+                return this.renderTasksTodayWidget(widget.data);
+            case 'tasks-overdue':
+                return this.renderTasksOverdueWidget(widget.data);
+            case 'tasks-completed':
+                return this.renderTasksCompletedWidget(widget.data);
+            case 'calendar-mini':
+                return this.renderCalendarMiniWidget(widget.data);
+            case 'calendar-upcoming':
+                return this.renderCalendarUpcomingWidget(widget.data);
+            case 'habits-streak':
+                return this.renderHabitsStreakWidget(widget.data);
+            case 'wallet-balance':
+                return this.renderWalletBalanceWidget(widget.data);
+            case 'wallet-transactions':
+                return this.renderWalletTransactionsWidget(widget.data);
+            case 'wallet-summary':
+                return this.renderWalletSummaryWidget(widget.data);
+            case 'goals-progress':
+                return this.renderGoalsProgressWidget(widget.data);
+            case 'goals-achievements':
+                return this.renderGoalsAchievementsWidget(widget.data);
+            case 'crm-projects':
+                return this.renderCrmProjectsWidget(widget.data);
+            case 'crm-revenue':
+                return this.renderCrmRevenueWidget(widget.data);
+            case 'pomodoro-timer':
+                return this.renderPomodoroTimerWidget(widget.data);
+            case 'daily-summary':
+                return this.renderDailySummaryWidget(widget.data);
+            case 'focus-time':
+                return this.renderFocusTimeWidget(widget.data);
+            case 'quick-notes':
+                return this.renderQuickNotesWidget(widget.data);
+            case 'time-weather':
+                return this.renderTimeWeatherWidget(widget.data);
+            case 'bookmark-shortcuts':
+                return this.renderBookmarkShortcutsWidget(widget.data);
+            case 'analytics-productivity':
+                return this.renderAnalyticsProductivityWidget(widget.data);
+            default:
+                return '<p>Widget content coming soon...</p>';
+        }
+    }
+
+    renderNotesRecentWidget(data) {
+        if (data.notes.length === 0) {
+            return '<p style="text-align: center; color: var(--color-gray-600);">No recent notes</p>';
+        }
+        return data.notes.slice(0, 3).map(note => `
+            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
+                <div style="font-weight: 500; margin-bottom: 0.25rem;">${note.title}</div>
+                <div style="font-size: 0.875rem; color: var(--color-gray-600);">${note.preview}</div>
+            </div>
+        `).join('');
+    }
+
+    renderNotesStatsWidget(data) {
+        return `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.total}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Total</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.thisWeek}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">This Week</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.growth}%</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Growth</div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTasksTodayWidget(data) {
+        const progress = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+        return `
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Progress</span>
+                    <span>${data.completed}/${data.total}</span>
+                </div>
+                <div style="background-color: var(--color-gray-200); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, var(--color-gray-400) 0%, var(--color-gray-500) 100%); height: 100%; width: ${progress}%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            <p style="text-align: center; color: var(--color-gray-600); font-size: 0.875rem;">${data.tasks.length} tasks due today</p>
+        `;
+    }
+
+    renderTasksOverdueWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: #ef4444; margin-bottom: 0.5rem;">${data.count}</div>
+                <div style="color: var(--color-gray-600);">Overdue Tasks</div>
+                ${data.count > 0 ? '<div style="margin-top: 0.5rem; font-size: 0.875rem; color: #ef4444;">⚠️ Needs attention</div>' : ''}
+            </div>
+        `;
+    }
+
+    renderTasksCompletedWidget(data) {
+        return `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: center;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.count}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Completed</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.hours}h</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Hours</div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderCalendarMiniWidget(data) {
+        const today = new Date();
+        const month = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        return `
+            <div style="text-align: center;">
+                <div style="font-weight: 600; margin-bottom: 1rem;">${month}</div>
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black);">${today.getDate()}</div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">${today.toLocaleDateString('en-US', { weekday: 'long' })}</div>
+                <div style="font-size: 0.875rem; color: var(--color-gray-600);">${data.events.length} events today</div>
+            </div>
+        `;
+    }
+
+    renderCalendarUpcomingWidget(data) {
+        if (data.events.length === 0) {
+            return '<p style="text-align: center; color: var(--color-gray-600);">No upcoming events</p>';
+        }
+        return data.events.slice(0, 3).map(event => `
+            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
+                <div style="font-weight: 500; margin-bottom: 0.25rem;">${event.title}</div>
+                <div style="font-size: 0.875rem; color: var(--color-gray-600);">${event.date}</div>
+            </div>
+        `).join('');
+    }
+
+    renderHabitsStreakWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">${data.totalStreaks}</div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">Total Streaks</div>
+                <div style="font-size: 0.875rem; color: var(--color-gray-600);">${data.habits.length} active habits</div>
+            </div>
+        `;
+    }
+
+    renderAnalyticsProductivityWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">${data.productivity}%</div>
+                <div style="color: var(--color-gray-600);">Productivity Score</div>
+                <div style="margin-top: 1rem; height: 60px; background: linear-gradient(135deg, var(--color-gray-300) 0%, var(--color-gray-400) 100%); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--color-black); font-size: 0.875rem;">
+                    Chart visualization coming soon
+                </div>
+            </div>
+        `;
+    }
+
+    // ========================================
+    // NEW WIDGET RENDERING FUNCTIONS
+    // ========================================
+
+    renderWalletBalanceWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">
+                    ${data.currency}${data.balance.toLocaleString()}
+                </div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">Current Balance</div>
+                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <button style="padding: 0.5rem 1rem; background: var(--color-gray-300); border: none; border-radius: 4px; color: var(--color-black); font-size: 0.875rem; cursor: pointer;">+ Add</button>
+                    <button style="padding: 0.5rem 1rem; background: var(--color-gray-300); border: none; border-radius: 4px; color: var(--color-black); font-size: 0.875rem; cursor: pointer;">- Expense</button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderWalletTransactionsWidget(data) {
+        if (data.transactions.length === 0) {
+            return '<p style="text-align: center; color: var(--color-gray-600);">No recent transactions</p>';
+        }
+        return data.transactions.slice(0, 3).map(transaction => `
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
+                <div>
+                    <div style="font-weight: 500; font-size: 0.875rem;">${transaction.description}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">${transaction.date}</div>
+                </div>
+                <div style="font-weight: 600; color: ${transaction.type === 'income' ? '#10b981' : '#ef4444'};">
+                    ${transaction.type === 'income' ? '+' : '-'}₹${transaction.amount}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderWalletSummaryWidget(data) {
+        return `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                <div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #10b981;">₹${data.income}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">Income</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: #ef4444;">₹${data.expense}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">Expense</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--color-black);">₹${data.net}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">Net</div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderGoalsProgressWidget(data) {
+        const progress = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+        return `
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Goals Progress</span>
+                    <span>${data.completed}/${data.total}</span>
+                </div>
+                <div style="background-color: var(--color-gray-200); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, var(--color-gray-400) 0%, var(--color-gray-500) 100%); height: 100%; width: ${progress}%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            <p style="text-align: center; color: var(--color-gray-600); font-size: 0.875rem;">${data.goals.length} active goals</p>
+        `;
+    }
+
+    renderGoalsAchievementsWidget(data) {
+        if (data.achievements.length === 0) {
+            return '<p style="text-align: center; color: var(--color-gray-600);">No recent achievements</p>';
+        }
+        return data.achievements.slice(0, 3).map(achievement => `
+            <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--color-gray-300) 0%, var(--color-gray-400) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div style="font-weight: 500; font-size: 0.875rem;">${achievement.title}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">${achievement.date}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    renderCrmProjectsWidget(data) {
+        return `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: center;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.active}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Active</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.completed}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Completed</div>
+                </div>
+            </div>
+            <div style="margin-top: 1rem; text-align: center; color: var(--color-gray-600); font-size: 0.875rem;">
+                ${data.projects.length} total projects
+            </div>
+        `;
+    }
+
+    renderCrmRevenueWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">
+                    ₹${data.monthly.toLocaleString()}
+                </div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">This Month</div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: center;">
+                    <div>
+                        <div style="font-size: 1rem; font-weight: 600; color: var(--color-black);">₹${data.total.toLocaleString()}</div>
+                        <div style="font-size: 0.75rem; color: var(--color-gray-600);">Total</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1rem; font-weight: 600; color: var(--color-black);">${data.clients}</div>
+                        <div style="font-size: 0.75rem; color: var(--color-gray-600);">Clients</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderPomodoroTimerWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">
+                    ${data.isRunning ? '25:00' : '25:00'}
+                </div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">Focus Session</div>
+                <button style="padding: 0.75rem 1.5rem; background: var(--color-gray-300); border: none; border-radius: 6px; color: var(--color-black); font-weight: 600; cursor: pointer; width: 100%;">
+                    ${data.isRunning ? 'Pause' : 'Start'} Timer
+                </button>
+                <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.875rem; color: var(--color-gray-600);">
+                    <span>${data.sessions} sessions</span>
+                    <span>${data.focusTime}h focused</span>
+                </div>
+            </div>
+        `;
+    }
+
+    renderDailySummaryWidget(data) {
+        return `
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;">
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.tasksCompleted}</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Tasks Done</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.hoursWorked}h</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Hours Worked</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-black);">${data.productivity}%</div>
+                    <div style="font-size: 0.875rem; color: var(--color-gray-600);">Productivity</div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderFocusTimeWidget(data) {
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">
+                    ${data.today}h
+                </div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">Today's Focus</div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; text-align: center;">
+                    <div>
+                        <div style="font-size: 1rem; font-weight: 600; color: var(--color-black);">${data.thisWeek}h</div>
+                        <div style="font-size: 0.75rem; color: var(--color-gray-600);">This Week</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 1rem; font-weight: 600; color: var(--color-black);">${data.streak}</div>
+                        <div style="font-size: 0.75rem; color: var(--color-gray-600);">Day Streak</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderQuickNotesWidget(data) {
+        return `
+            <div style="margin-bottom: 1rem;">
+                <textarea placeholder="Quick note..." style="width: 100%; height: 80px; padding: 0.5rem; border: 1px solid var(--color-gray-200); border-radius: 4px; background: var(--color-gray-50); color: var(--color-black); resize: none; font-size: 0.875rem;"></textarea>
+            </div>
+            <button style="width: 100%; padding: 0.5rem; background: var(--color-gray-300); border: none; border-radius: 4px; color: var(--color-black); font-weight: 600; cursor: pointer;">
+                Save Note
+            </button>
+        `;
+    }
+
+    renderTimeWeatherWidget(data) {
+        const now = new Date();
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const date = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        
+        return `
+            <div style="text-align: center;">
+                <div style="font-size: 2rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.25rem;">
+                    ${time}
+                </div>
+                <div style="color: var(--color-gray-600); margin-bottom: 1rem; font-size: 0.875rem;">
+                    ${date}
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.5rem;">☀️</span>
+                    <span style="font-weight: 600; color: var(--color-black);">${data.weather}</span>
+                </div>
+                <div style="color: var(--color-gray-600); font-size: 0.875rem;">
+                    ${data.temp}
+                </div>
+            </div>
+        `;
+    }
+
+    renderBookmarkShortcutsWidget(data) {
+        if (data.bookmarks.length === 0) {
+            return '<p style="text-align: center; color: var(--color-gray-600);">No bookmarks yet</p>';
+        }
+        return data.bookmarks.slice(0, 4).map(bookmark => `
+            <div style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
+                <div style="width: 24px; height: 24px; background: var(--color-gray-300); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">
+                    ${bookmark.title.charAt(0).toUpperCase()}
+                </div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 500; font-size: 0.875rem;">${bookmark.title}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-gray-600);">${bookmark.url}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    removeWidget(widgetId) {
+        this.widgets = this.widgets.filter(widget => widget.id !== widgetId);
+        
+        const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (widgetElement) {
+            widgetElement.remove();
+        }
+        
+        this.updateEmptyState();
+        this.saveWidgets();
+    }
+
+    updateEmptyState() {
+        const emptyState = document.getElementById('dashboardEmptyState');
+        const widgetGrid = document.getElementById('widgetGrid');
+        
+        if (this.widgets.length === 0) {
+            if (emptyState) emptyState.style.display = 'flex';
+            if (widgetGrid) widgetGrid.style.display = 'none';
+        } else {
+            if (emptyState) emptyState.style.display = 'none';
+            if (widgetGrid) widgetGrid.style.display = 'grid';
+        }
+    }
+
+    saveWidgets() {
+        try {
+            localStorage.setItem('dashboard_widgets', JSON.stringify(this.widgets));
+        } catch (error) {
+            console.error('Error saving widgets:', error);
+        }
+    }
+
+    loadWidgets() {
+        try {
+            const savedWidgets = localStorage.getItem('dashboard_widgets');
+            if (savedWidgets) {
+                this.widgets = JSON.parse(savedWidgets);
+                this.widgets.forEach(widget => {
+                    this.renderWidget(widget);
+                });
+                this.updateEmptyState();
+            }
+        } catch (error) {
+            console.error('Error loading widgets:', error);
+        }
+    }
+
+    // Method to update widget data (called by other modules)
+    updateWidgetData(widgetType, newData) {
+        const widget = this.widgets.find(w => w.type === widgetType);
+        if (widget) {
+            widget.data = { ...widget.data, ...newData };
+            const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
+            if (widgetElement) {
+                widgetElement.innerHTML = this.renderWidgetContent(widget);
+            }
+        }
+    }
+
+    // ========================================
+    // WIDGET RESIZING AND DRAG & DROP
+    // ========================================
+
+    toggleSizeSelector(widgetId) {
+        // Close all other size selectors
+        document.querySelectorAll('.widget-size-selector').forEach(selector => {
+            if (selector.id !== `sizeSelector_${widgetId}`) {
+                selector.classList.remove('active');
+            }
+        });
+
+        // Toggle current selector
+        const selector = document.getElementById(`sizeSelector_${widgetId}`);
+        if (selector) {
+            selector.classList.toggle('active');
+        }
+    }
+
+    resizeWidget(widgetId, newSize) {
+        const widget = this.widgets.find(w => w.id === widgetId);
+        if (widget) {
+            widget.size = newSize;
+            
+            // Update the widget element
+            const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
+            if (widgetElement) {
+                // Remove old size class
+                widgetElement.classList.remove('size-small', 'size-medium', 'size-large', 'size-extra-large');
+                // Add new size class
+                widgetElement.classList.add(`size-${newSize}`);
+            }
+
+            // Update size selector active state
+            const selector = document.getElementById(`sizeSelector_${widgetId}`);
+            if (selector) {
+                selector.querySelectorAll('.widget-size-option').forEach(option => {
+                    option.classList.remove('active');
+                });
+                selector.querySelector(`[onclick*="'${newSize}'"]`).classList.add('active');
+            }
+
+            this.saveWidgets();
+        }
+    }
+
+    setupWidgetDragAndDrop(widgetElement) {
+        let draggedElement = null;
+        let draggedIndex = -1;
+
+        // Drag start
+        widgetElement.addEventListener('dragstart', (e) => {
+            draggedElement = widgetElement;
+            draggedIndex = Array.from(widgetElement.parentNode.children).indexOf(widgetElement);
+            widgetElement.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', widgetElement.outerHTML);
+        });
+
+        // Drag end
+        widgetElement.addEventListener('dragend', (e) => {
+            widgetElement.classList.remove('dragging');
+            document.querySelectorAll('.widget-card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+            draggedElement = null;
+            draggedIndex = -1;
+        });
+
+        // Drag over
+        widgetElement.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (e.target !== draggedElement) {
+                e.target.classList.add('drag-over');
+            }
+        });
+
+        // Drag leave
+        widgetElement.addEventListener('dragleave', (e) => {
+            e.target.classList.remove('drag-over');
+        });
+
+        // Drop
+        widgetElement.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.target.classList.remove('drag-over');
+
+            if (draggedElement && e.target !== draggedElement) {
+                const dropIndex = Array.from(e.target.parentNode.children).indexOf(e.target);
+                
+                // Reorder widgets array
+                const draggedWidget = this.widgets.find(w => w.id === draggedElement.dataset.widgetId);
+                const dropWidget = this.widgets.find(w => w.id === e.target.dataset.widgetId);
+                
+                if (draggedWidget && dropWidget) {
+                    const draggedWidgetIndex = this.widgets.indexOf(draggedWidget);
+                    const dropWidgetIndex = this.widgets.indexOf(dropWidget);
+                    
+                    // Remove dragged widget from array
+                    this.widgets.splice(draggedWidgetIndex, 1);
+                    
+                    // Insert at new position
+                    const newIndex = dropWidgetIndex > draggedWidgetIndex ? dropWidgetIndex - 1 : dropWidgetIndex;
+                    this.widgets.splice(newIndex, 0, draggedWidget);
+                    
+                    // Re-render the grid
+                    this.reorderWidgets();
+                }
+            }
+        });
+
+        // Close size selector when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.widget-control')) {
+                document.querySelectorAll('.widget-size-selector').forEach(selector => {
+                    selector.classList.remove('active');
+                });
+            }
+        });
+    }
+
+    reorderWidgets() {
+        const widgetGrid = document.getElementById('widgetGrid');
+        if (!widgetGrid) return;
+
+        // Clear the grid
+        widgetGrid.innerHTML = '';
+
+        // Re-render all widgets in new order
+        this.widgets.forEach(widget => {
+            this.renderWidget(widget);
+        });
+
+        this.saveWidgets();
+    }
+
+    // Enhanced save method to include size and position
+    saveWidgets() {
+        try {
+            const widgetsToSave = this.widgets.map((widget, index) => ({
+                ...widget,
+                position: index
+            }));
+            localStorage.setItem('dashboard_widgets', JSON.stringify(widgetsToSave));
+        } catch (error) {
+            console.error('Error saving widgets:', error);
+        }
+    }
+
+    // Enhanced load method to restore size and position
+    loadWidgets() {
+        try {
+            const savedWidgets = localStorage.getItem('dashboard_widgets');
+            if (savedWidgets) {
+                this.widgets = JSON.parse(savedWidgets);
+                // Sort by position
+                this.widgets.sort((a, b) => (a.position || 0) - (b.position || 0));
+                this.widgets.forEach(widget => {
+                    this.renderWidget(widget);
+                });
+                this.updateEmptyState();
+            }
+        } catch (error) {
+            console.error('Error loading widgets:', error);
+        }
+    }
+}
+
+// Initialize dashboard widgets when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.dashboardWidgets = new DashboardWidgets();
+});
 
 // Export for potential module usage
 if (typeof module !== 'undefined' && module.exports) {
