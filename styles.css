@@ -6881,6 +6881,65 @@ a:focus {
     font-weight: 400;
 }
 
+/* Dashboard Actions */
+.dashboard-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Refresh Widgets Button */
+.refresh-widgets-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, var(--color-gray-200) 0%, var(--color-gray-300) 100%);
+    color: var(--color-black);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.refresh-widgets-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.refresh-widgets-btn:hover::before {
+    left: 100%;
+}
+
+.refresh-widgets-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, var(--color-gray-300) 0%, var(--color-gray-400) 100%);
+}
+
+.refresh-widgets-btn:active {
+    transform: translateY(0);
+}
+
+.refresh-widgets-btn svg {
+    transition: transform 0.3s ease;
+}
+
+.refresh-widgets-btn:hover svg {
+    transform: rotate(180deg);
+}
+
 /* Add Widget Button */
 .add-widget-btn {
     display: flex;
@@ -7386,6 +7445,12 @@ a:focus {
         font-size: 1.5rem;
     }
     
+    .dashboard-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .refresh-widgets-btn,
     .add-widget-btn {
         width: 100%;
         justify-content: center;

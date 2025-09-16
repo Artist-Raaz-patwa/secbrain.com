@@ -9912,6 +9912,7 @@ class DashboardWidgets {
         // Add widget button
         const addWidgetBtn = document.getElementById('addWidgetBtn');
         const addFirstWidgetBtn = document.getElementById('addFirstWidgetBtn');
+        const refreshWidgetsBtn = document.getElementById('refreshWidgetsBtn');
         
         if (addWidgetBtn) {
             addWidgetBtn.addEventListener('click', () => this.showWidgetSelectionModal());
@@ -9919,6 +9920,10 @@ class DashboardWidgets {
         
         if (addFirstWidgetBtn) {
             addFirstWidgetBtn.addEventListener('click', () => this.showWidgetSelectionModal());
+        }
+        
+        if (refreshWidgetsBtn) {
+            refreshWidgetsBtn.addEventListener('click', () => this.refreshAllWidgets());
         }
 
         // Widget selection modal
@@ -9970,22 +9975,43 @@ class DashboardWidgets {
         }
     }
 
-    addWidget(widgetType) {
+    async addWidget(widgetType) {
         const widgetId = `widget_${++this.widgetIdCounter}`;
-        const widget = {
+        
+        // Show loading state
+        const loadingWidget = {
             id: widgetId,
             type: widgetType,
             title: this.getWidgetTitle(widgetType),
             icon: this.getWidgetIcon(widgetType),
-            data: this.getWidgetData(widgetType),
-            size: 'medium', // Default size
-            position: this.widgets.length // Position in the grid
+            data: { loading: true },
+            size: 'medium',
+            position: this.widgets.length
         };
 
-        this.widgets.push(widget);
-        this.renderWidget(widget);
+        this.widgets.push(loadingWidget);
+        this.renderWidget(loadingWidget);
         this.updateEmptyState();
         this.saveWidgets();
+
+        // Fetch real data asynchronously
+        try {
+            const realData = await this.getWidgetData(widgetType);
+            
+            // Update the widget with real data
+            const widget = this.widgets.find(w => w.id === widgetId);
+            if (widget) {
+                widget.data = realData;
+                const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"] .widget-card-content`);
+                if (widgetElement) {
+                    widgetElement.innerHTML = this.renderWidgetContent(widget);
+                }
+                this.saveWidgets();
+            }
+        } catch (error) {
+            console.error('Error loading widget data:', error);
+            // Keep the loading state or show error
+        }
     }
 
     getWidgetTitle(widgetType) {
@@ -10115,27 +10141,54 @@ class DashboardWidgets {
         return icons[widgetType] || '';
     }
 
-    getWidgetData(widgetType) {
-        // This would be populated with actual data from the respective modules
-        // For now, return placeholder data
+    async getWidgetData(widgetType) {
+        // Fetch real data from Firebase modules
+        try {
+            switch (widgetType) {
+                case 'notes-recent':
+                    return await this.getNotesRecentData();
+                case 'notes-stats':
+                    return await this.getNotesStatsData();
+                case 'tasks-today':
+                    return await this.getTasksTodayData();
+                case 'tasks-overdue':
+                    return await this.getTasksOverdueData();
+                case 'tasks-completed':
+                    return await this.getTasksCompletedData();
+                case 'wallet-balance':
+                    return await this.getWalletBalanceData();
+                case 'wallet-transactions':
+                    return await this.getWalletTransactionsData();
+                case 'wallet-summary':
+                    return await this.getWalletSummaryData();
+                case 'crm-projects':
+                    return await this.getCrmProjectsData();
+                case 'crm-revenue':
+                    return await this.getCrmRevenueData();
+                case 'pomodoro-timer':
+                    return await this.getPomodoroTimerData();
+                case 'daily-summary':
+                    return await this.getDailySummaryData();
+                case 'goals-progress':
+                    return await this.getGoalsProgressData();
+                case 'goals-achievements':
+                    return await this.getGoalsAchievementsData();
+                default:
+                    // Return placeholder data for widgets not yet implemented
+                    return this.getPlaceholderData(widgetType);
+            }
+        } catch (error) {
+            console.error(`Error fetching data for widget ${widgetType}:`, error);
+            return this.getPlaceholderData(widgetType);
+        }
+    }
+
+    getPlaceholderData(widgetType) {
+        // Fallback placeholder data
         const data = {
-            'notes-recent': { notes: [], count: 0 },
-            'notes-stats': { total: 0, thisWeek: 0, growth: 0 },
-            'tasks-today': { tasks: [], completed: 0, total: 0 },
-            'tasks-overdue': { tasks: [], count: 0 },
-            'tasks-completed': { tasks: [], count: 0, hours: 0 },
             'calendar-mini': { events: [], currentDate: new Date() },
             'calendar-upcoming': { events: [], count: 0 },
             'habits-streak': { habits: [], totalStreaks: 0 },
-            'wallet-balance': { balance: 0, currency: '₹', transactions: [] },
-            'wallet-transactions': { transactions: [], count: 0 },
-            'wallet-summary': { income: 0, expense: 0, net: 0 },
-            'goals-progress': { goals: [], completed: 0, total: 0 },
-            'goals-achievements': { achievements: [], count: 0 },
-            'crm-projects': { projects: [], active: 0, completed: 0 },
-            'crm-revenue': { monthly: 0, total: 0, clients: 0 },
-            'pomodoro-timer': { sessions: 0, focusTime: 0, isRunning: false },
-            'daily-summary': { tasksCompleted: 0, hoursWorked: 0, productivity: 0 },
             'focus-time': { today: 0, thisWeek: 0, streak: 0 },
             'quick-notes': { notes: [], recent: [] },
             'time-weather': { time: new Date(), weather: 'Sunny', temp: '24°C' },
@@ -10143,6 +10196,234 @@ class DashboardWidgets {
             'analytics-productivity': { chartData: [], productivity: 0 }
         };
         return data[widgetType] || {};
+    }
+
+    // Data fetching methods for each widget type
+    async getNotesRecentData() {
+        if (!window.secondBrain?.notes) return { notes: [], count: 0 };
+        
+        const notes = window.secondBrain.notes.notes || [];
+        const recentNotes = notes.slice(0, 3).map(note => ({
+            title: note.title || 'Untitled Note',
+            content: note.content ? note.content.substring(0, 100) + '...' : '',
+            updatedAt: note.updatedAt || note.createdAt
+        }));
+        
+        return { notes: recentNotes, count: notes.length };
+    }
+
+    async getNotesStatsData() {
+        if (!window.secondBrain?.notes) return { total: 0, thisWeek: 0, growth: 0 };
+        
+        const notes = window.secondBrain.notes.notes || [];
+        const total = notes.length;
+        
+        // Calculate notes created this week
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const thisWeek = notes.filter(note => {
+            const noteDate = new Date(note.createdAt || note.updatedAt);
+            return noteDate >= oneWeekAgo;
+        }).length;
+        
+        return { total, thisWeek, growth: thisWeek > 0 ? Math.round((thisWeek / total) * 100) : 0 };
+    }
+
+    async getTasksTodayData() {
+        if (!window.secondBrain?.crm) return { tasks: [], completed: 0, total: 0 };
+        
+        const projects = window.secondBrain.crm.projects || [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        let allTasks = [];
+        projects.forEach(project => {
+            if (project.tasks) {
+                project.tasks.forEach(task => {
+                    if (task.deadline === today) {
+                        allTasks.push({
+                            ...task,
+                            projectName: project.name
+                        });
+                    }
+                });
+            }
+        });
+        
+        const completed = allTasks.filter(task => task.completed).length;
+        const total = allTasks.length;
+        
+        return { tasks: allTasks, completed, total };
+    }
+
+    async getTasksOverdueData() {
+        if (!window.secondBrain?.crm) return { tasks: [], count: 0 };
+        
+        const projects = window.secondBrain.crm.projects || [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        let overdueTasks = [];
+        projects.forEach(project => {
+            if (project.tasks) {
+                project.tasks.forEach(task => {
+                    if (task.deadline && task.deadline < today && !task.completed) {
+                        overdueTasks.push({
+                            ...task,
+                            projectName: project.name
+                        });
+                    }
+                });
+            }
+        });
+        
+        return { tasks: overdueTasks, count: overdueTasks.length };
+    }
+
+    async getTasksCompletedData() {
+        if (!window.secondBrain?.completedTasks) return { tasks: [], count: 0, hours: 0 };
+        
+        const completedTasks = window.secondBrain.completedTasks.completedTasks || [];
+        const totalHours = completedTasks.reduce((sum, task) => sum + (task.hoursSpent || 0), 0);
+        
+        return { 
+            tasks: completedTasks.slice(0, 5), // Show last 5 completed tasks
+            count: completedTasks.length, 
+            hours: Math.round(totalHours * 10) / 10 // Round to 1 decimal place
+        };
+    }
+
+    async getWalletBalanceData() {
+        if (!window.secondBrain?.wallet) return { balance: 0, currency: '₹', transactions: [] };
+        
+        const transactions = window.secondBrain.wallet.transactions || [];
+        const balance = transactions.reduce((sum, transaction) => {
+            return sum + (transaction.type === 'income' ? transaction.amount : -transaction.amount);
+        }, 0);
+        
+        const recentTransactions = transactions.slice(0, 3);
+        
+        return { balance, currency: '₹', transactions: recentTransactions };
+    }
+
+    async getWalletTransactionsData() {
+        if (!window.secondBrain?.wallet) return { transactions: [], count: 0 };
+        
+        const transactions = window.secondBrain.wallet.transactions || [];
+        const recentTransactions = transactions.slice(0, 5);
+        
+        return { transactions: recentTransactions, count: transactions.length };
+    }
+
+    async getWalletSummaryData() {
+        if (!window.secondBrain?.wallet) return { income: 0, expense: 0, net: 0 };
+        
+        const transactions = window.secondBrain.wallet.transactions || [];
+        const income = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const expense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        return { income, expense, net: income - expense };
+    }
+
+    async getCrmProjectsData() {
+        if (!window.secondBrain?.crm) return { projects: [], active: 0, completed: 0 };
+        
+        const projects = window.secondBrain.crm.projects || [];
+        const active = projects.filter(p => !p.completed).length;
+        const completed = projects.filter(p => p.completed).length;
+        
+        return { projects: projects.slice(0, 3), active, completed };
+    }
+
+    async getCrmRevenueData() {
+        if (!window.secondBrain?.crm) return { monthly: 0, total: 0, clients: 0 };
+        
+        const projects = window.secondBrain.crm.projects || [];
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        
+        let monthlyRevenue = 0;
+        let totalRevenue = 0;
+        const clients = new Set();
+        
+        projects.forEach(project => {
+            if (project.client) {
+                clients.add(project.client.name || project.client.email);
+            }
+            
+            if (project.tasks) {
+                project.tasks.forEach(task => {
+                    if (task.completed && task.price) {
+                        totalRevenue += task.price;
+                        
+                        // Check if task was completed this month
+                        if (task.completedAt) {
+                            const completedDate = new Date(task.completedAt);
+                            if (completedDate.getMonth() === currentMonth && completedDate.getFullYear() === currentYear) {
+                                monthlyRevenue += task.price;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        
+        return { monthly: monthlyRevenue, total: totalRevenue, clients: clients.size };
+    }
+
+    async getPomodoroTimerData() {
+        if (!window.secondBrain?.pomodoro) return { sessions: 0, focusTime: 0, isRunning: false };
+        
+        const pomodoro = window.secondBrain.pomodoro;
+        const sessions = pomodoro.sessions || [];
+        const focusTime = sessions.reduce((sum, session) => {
+            return sum + (session.type === 'focus' ? session.duration : 0);
+        }, 0);
+        
+        return { 
+            sessions: sessions.length, 
+            focusTime: Math.round(focusTime / 60), // Convert seconds to minutes
+            isRunning: pomodoro.isRunning || false 
+        };
+    }
+
+    async getDailySummaryData() {
+        if (!window.secondBrain?.completedTasks) return { tasksCompleted: 0, hoursWorked: 0, productivity: 0 };
+        
+        const completedTasks = window.secondBrain.completedTasks.completedTasks || [];
+        const today = new Date().toISOString().split('T')[0];
+        
+        const todayTasks = completedTasks.filter(task => {
+            const completedDate = task.completedAt ? task.completedAt.split('T')[0] : '';
+            return completedDate === today;
+        });
+        
+        const tasksCompleted = todayTasks.length;
+        const hoursWorked = todayTasks.reduce((sum, task) => sum + (task.hoursSpent || 0), 0);
+        const productivity = hoursWorked > 0 ? Math.min(100, Math.round((tasksCompleted / Math.max(1, hoursWorked)) * 20)) : 0;
+        
+        return { tasksCompleted, hoursWorked: Math.round(hoursWorked * 10) / 10, productivity };
+    }
+
+    async getGoalsProgressData() {
+        if (!window.secondBrain?.goals) return { goals: [], completed: 0, total: 0 };
+        
+        const goals = window.secondBrain.goals.goals || [];
+        const completed = goals.filter(g => g.completed).length;
+        const total = goals.length;
+        
+        return { goals: goals.slice(0, 3), completed, total };
+    }
+
+    async getGoalsAchievementsData() {
+        if (!window.secondBrain?.goals) return { achievements: [], count: 0 };
+        
+        const goals = window.secondBrain.goals.goals || [];
+        const achievements = goals.filter(g => g.completed).slice(0, 3);
+        
+        return { achievements, count: achievements.length };
     }
 
     renderWidget(widget) {
@@ -10204,6 +10485,24 @@ class DashboardWidgets {
     }
 
     renderWidgetContent(widget) {
+        // Show loading state
+        if (widget.data && widget.data.loading) {
+            return `
+                <div style="display: flex; align-items: center; justify-content: center; height: 100px; color: var(--color-gray-600);">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <div style="width: 16px; height: 16px; border: 2px solid var(--color-gray-300); border-top: 2px solid var(--color-gray-600); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        Loading data...
+                    </div>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+        }
+
         switch (widget.type) {
             case 'notes-recent':
                 return this.renderNotesRecentWidget(widget.data);
@@ -10661,7 +10960,7 @@ class DashboardWidgets {
     }
 
     // Method to update widget data (called by other modules)
-    updateWidgetData(widgetType, newData) {
+    async updateWidgetData(widgetType, newData) {
         const widget = this.widgets.find(w => w.type === widgetType);
         if (widget) {
             widget.data = { ...widget.data, ...newData };
@@ -10669,7 +10968,31 @@ class DashboardWidgets {
             if (widgetElement) {
                 widgetElement.innerHTML = this.renderWidgetContent(widget);
             }
+            this.saveWidgets();
         }
+    }
+
+    // Method to refresh all widget data
+    async refreshAllWidgets() {
+        console.log('🔄 Refreshing all dashboard widgets...');
+        
+        for (const widget of this.widgets) {
+            try {
+                const realData = await this.getWidgetData(widget.type);
+                widget.data = realData;
+                
+                // Update the widget content
+                const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
+                if (widgetElement) {
+                    widgetElement.innerHTML = this.renderWidgetContent(widget);
+                }
+            } catch (error) {
+                console.error(`Error refreshing widget ${widget.type}:`, error);
+            }
+        }
+        
+        this.saveWidgets();
+        console.log('✅ All widgets refreshed');
     }
 
     // ========================================
@@ -10824,17 +11147,39 @@ class DashboardWidgets {
     }
 
     // Enhanced load method to restore size and position
-    loadWidgets() {
+    async loadWidgets() {
         try {
             const savedWidgets = localStorage.getItem('dashboard_widgets');
             if (savedWidgets) {
                 this.widgets = JSON.parse(savedWidgets);
                 // Sort by position
                 this.widgets.sort((a, b) => (a.position || 0) - (b.position || 0));
+                
+                // Render widgets first with loading state
                 this.widgets.forEach(widget => {
+                    widget.data = { loading: true }; // Set loading state
                     this.renderWidget(widget);
                 });
                 this.updateEmptyState();
+                
+                // Then refresh data for each widget
+                for (const widget of this.widgets) {
+                    try {
+                        const realData = await this.getWidgetData(widget.type);
+                        widget.data = realData;
+                        
+                        // Update the widget content
+                        const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
+                        if (widgetElement) {
+                            widgetElement.innerHTML = this.renderWidgetContent(widget);
+                        }
+                    } catch (error) {
+                        console.error(`Error refreshing data for widget ${widget.type}:`, error);
+                        // Keep loading state or show error
+                    }
+                }
+                
+                this.saveWidgets();
             }
         } catch (error) {
             console.error('Error loading widgets:', error);
