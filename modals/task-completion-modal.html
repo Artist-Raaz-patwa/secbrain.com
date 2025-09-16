@@ -1,0 +1,35 @@
+<!-- Task Completion Modal -->
+<div class="task-completion-modal" id="taskCompletionModal">
+    <div class="task-completion-modal-content">
+        <div class="task-completion-modal-header">
+            <h3 class="task-completion-modal-title">Task Completed!</h3>
+            <button class="task-completion-modal-close" id="taskCompletionModalClose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="task-completion-modal-body">
+            <div class="task-completion-info">
+                <p class="task-completion-message">Great job completing this task! Please provide some details:</p>
+                <div class="task-name-display" id="completedTaskName"></div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="hoursSpent">Hours Spent *</label>
+                <input type="number" id="hoursSpent" class="form-input" min="0" step="0.25" placeholder="e.g., 2.5" required>
+                <small class="form-hint">Enter the number of hours you spent on this task</small>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="completionNote">Completion Note (Optional)</label>
+                <textarea id="completionNote" class="form-textarea" rows="3" placeholder="Add any notes about how the task went, what you learned, or any challenges you faced..."></textarea>
+            </div>
+        </div>
+        <div class="task-completion-modal-actions">
+            <button class="btn btn-secondary" id="cancelTaskCompletion">Cancel</button>
+            <button class="btn btn-primary" id="confirmTaskCompletion">Mark Complete</button>
+        </div>
+    </div>
+</div>

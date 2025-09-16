@@ -665,6 +665,13 @@ class SecondBrain {
             this.currentModule = activeNavLink.dataset.module;
         }
         
+        // Initialize dashboard event listeners if we're on dashboard
+        if (this.currentModule === 'dashboard') {
+            setTimeout(() => {
+                this.setupDashboardEventListeners();
+            }, 100);
+        }
+        
         this.loadModule(this.currentModule);
         
         // Initialize CRM if we're starting on the CRM module
@@ -699,6 +706,13 @@ class SecondBrain {
         if (this.currentModule === 'goals') {
             setTimeout(async () => {
                 await this.initializeGoals();
+            }, 100);
+        }
+
+        // Initialize Analytics if we're starting on the Analytics module
+        if (this.currentModule === 'analytics') {
+            setTimeout(async () => {
+                await this.initializeAnalytics();
             }, 100);
         }
 
@@ -942,6 +956,13 @@ class SecondBrain {
             }, 100);
         }
 
+        // Initialize Analytics if switching to Analytics module
+        if (moduleName === 'analytics') {
+            setTimeout(async () => {
+                await this.initializeAnalytics();
+            }, 100);
+        }
+
         // Initialize Completed Tasks if switching to completed-tasks module
         if (moduleName === 'completed-tasks') {
             setTimeout(() => {
@@ -991,15 +1012,30 @@ class SecondBrain {
 
         if (!contentTitle || !contentSubtitle || !contentBody) return;
 
-        // Special handling for dashboard - don't replace content since it's already in HTML
+        // Special handling for dashboard - restore original content
         if (moduleName === 'dashboard') {
             contentTitle.textContent = 'Dashboard';
             contentSubtitle.textContent = 'Welcome to your Second Brain';
-            // Don't replace contentBody.innerHTML for dashboard
-            // Initialize dashboard widgets if not already done
+            
+            // Restore the original dashboard content
+            contentBody.innerHTML = this.getDashboardContent();
+            
+            // Reinitialize dashboard widgets and event listeners
+            setTimeout(() => {
             if (window.dashboardWidgets) {
+                    // Re-setup event listeners for dashboard buttons
+                    this.setupDashboardEventListeners();
+                    
+                    // Re-render all existing widgets
+                    window.dashboardWidgets.widgets.forEach(widget => {
+                        window.dashboardWidgets.renderWidget(widget);
+                    });
+                    
                 window.dashboardWidgets.updateEmptyState();
+                // Refresh all widgets when returning to dashboard
+                window.dashboardWidgets.refreshAllWidgets().catch(console.error);
             }
+            }, 100);
             return;
         }
 
@@ -1090,10 +1126,98 @@ class SecondBrain {
         }
     }
 
+    setupDashboardEventListeners() {
+        // Add widget button
+        const addWidgetBtn = document.getElementById('addWidgetBtn');
+        const addFirstWidgetBtn = document.getElementById('addFirstWidgetBtn');
+        const refreshWidgetsBtn = document.getElementById('refreshWidgetsBtn');
+
+        if (addWidgetBtn) {
+            addWidgetBtn.addEventListener('click', () => {
+                if (window.dashboardWidgets) {
+                    window.dashboardWidgets.showWidgetSelectionModal();
+                }
+            });
+        }
+
+        if (addFirstWidgetBtn) {
+            addFirstWidgetBtn.addEventListener('click', () => {
+                if (window.dashboardWidgets) {
+                    window.dashboardWidgets.showWidgetSelectionModal();
+                }
+            });
+        }
+
+        if (refreshWidgetsBtn) {
+            refreshWidgetsBtn.addEventListener('click', () => {
+                if (window.dashboardWidgets) {
+                    window.dashboardWidgets.refreshAllWidgets().catch(console.error);
+                }
+            });
+        }
+    }
+
     getDashboardContent() {
-        // Return empty string since the dashboard content is now in the HTML
-        // The new dashboard widgets system will handle the content
-        return '';
+        // Return the original dashboard content
+        return `
+            <!-- Dashboard Header with Add Widget Button -->
+            <div class="dashboard-header">
+                <div class="dashboard-header-content">
+                    <div class="dashboard-title-section">
+                        <h2 class="dashboard-title">My Dashboard</h2>
+                        <p class="dashboard-subtitle">Customize your workspace with widgets from all modules</p>
+                    </div>
+                    <div class="dashboard-actions">
+                        <button class="refresh-widgets-btn" id="refreshWidgetsBtn" title="Refresh all widgets">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                            Refresh
+                        </button>
+                        <button class="add-widget-btn" id="addWidgetBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Widget
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid Container -->
+            <div class="dashboard-widgets-container" id="dashboardWidgetsContainer">
+                <!-- Empty State -->
+                <div class="dashboard-empty-state" id="dashboardEmptyState">
+                    <div class="empty-state-content">
+                        <div class="empty-state-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                        </div>
+                        <h3 class="empty-state-title">Your Dashboard is Empty</h3>
+                        <p class="empty-state-description">Add widgets from your modules to create a personalized workspace that fits your workflow.</p>
+                        <button class="btn btn-primary btn-large" id="addFirstWidgetBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Your First Widget
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Widget Grid -->
+                <div class="widget-grid" id="widgetGrid" style="display: none;">
+                    <!-- Widgets will be dynamically added here -->
+                </div>
+            </div>
+        `;
     }
 
     getNotesContent() {
@@ -1296,28 +1420,180 @@ class SecondBrain {
 
     getAnalyticsContent() {
         return `
-            <div class="dashboard-grid">
-                <div class="dashboard-card">
-                    <h3>Usage Statistics</h3>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Total Notes</span>
+            <div class="analytics-container">
+                <!-- Analytics Header -->
+                <div class="analytics-header">
+                    <h2 class="analytics-title">📊 Analytics Dashboard</h2>
+                    <div class="analytics-controls">
+                        <select id="analyticsTimeRange" class="analytics-select">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                        </select>
+                        <button id="exportAnalyticsBtn" class="analytics-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7,10 12,15 17,10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Key Metrics Overview -->
+                <div class="analytics-overview">
+                    <div class="metric-card">
+                        <div class="metric-icon">📝</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="totalNotes">0</span>
+                            <span class="metric-label">Total Notes</span>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Completed Tasks</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">✅</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="completedTasks">0</span>
+                            <span class="metric-label">Completed Tasks</span>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-number">0</span>
-                            <span class="stat-label">Bookmarks</span>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🎯</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="activeGoals">0</span>
+                            <span class="metric-label">Active Goals</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="totalRevenue">₹0</span>
+                            <span class="metric-label">Total Revenue</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">🔥</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="habitStreak">0</span>
+                            <span class="metric-label">Best Habit Streak</span>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">⏱️</div>
+                        <div class="metric-content">
+                            <span class="metric-number" id="focusTime">0h</span>
+                            <span class="metric-label">Focus Time</span>
                         </div>
                     </div>
                 </div>
-                
-                <div class="dashboard-card">
-                    <h3>Activity Trends</h3>
-                    <p>Analytics and insights will be displayed here.</p>
+
+                <!-- Charts Grid -->
+                <div class="analytics-charts">
+                    <!-- Task Completion Trends -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>📈 Task Completion Trends</h3>
+                            <div class="chart-controls">
+                                <button class="chart-btn active" data-chart="tasks-weekly">Weekly</button>
+                                <button class="chart-btn" data-chart="tasks-monthly">Monthly</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="taskCompletionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Goal Progress -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>🎯 Goal Progress Overview</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="goalProgressChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Analytics -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>💰 Revenue Analytics</h3>
+                            <div class="chart-controls">
+                                <button class="chart-btn active" data-chart="revenue-monthly">Monthly</button>
+                                <button class="chart-btn" data-chart="revenue-project">By Project</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Habit Tracking -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>🔥 Habit Consistency</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="habitChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Productivity Heatmap -->
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <h3>📅 Productivity Heatmap</h3>
+                            <div class="chart-controls">
+                                <button class="chart-btn active" data-chart="heatmap-tasks">Tasks</button>
+                                <button class="chart-btn" data-chart="heatmap-focus">Focus Time</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="productivityHeatmap"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Module Usage Stats -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>📊 Module Usage</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="moduleUsageChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Time Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>⏰ Time Distribution</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="timeDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Insights -->
+                <div class="analytics-insights">
+                    <div class="insights-card">
+                        <h3>💡 Key Insights</h3>
+                        <div id="insightsList" class="insights-list">
+                            <div class="insight-item">
+                                <span class="insight-icon">📈</span>
+                                <span class="insight-text">Loading insights...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="insights-card">
+                        <h3>🎯 Recommendations</h3>
+                        <div id="recommendationsList" class="recommendations-list">
+                            <div class="recommendation-item">
+                                <span class="recommendation-icon">💡</span>
+                                <span class="recommendation-text">Loading recommendations...</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -2334,12 +2610,23 @@ class SecondBrain {
         await this.calendar.loadEvents();
         this.setupCalendarEventListeners();
         
-        // Connect with habit tracker if it exists
-        if (this.habitTracker) {
-            this.calendar.setHabitTracker(this.habitTracker);
-            this.habitTracker.setCalendar(this.calendar);
-            this.calendar.updateHabitProgress();
+        // Always initialize habit tracker for calendar functionality
+        if (!this.habitTracker) {
+            this.habitTracker = new HabitTracker(this.firebase);
+            await this.habitTracker.loadHabits();
         }
+        
+        // Connect calendar with habit tracker
+        this.calendar.setHabitTracker(this.habitTracker);
+        this.habitTracker.setCalendar(this.calendar);
+        this.calendar.updateHabitProgress();
+        
+        // Ensure calendar is rendered after initialization
+        setTimeout(() => {
+            this.calendar.render();
+        }, 100);
+        
+        console.log('✅ Calendar initialized with habit tracker connection');
     }
 
     setupCalendarEventListeners() {
@@ -2795,6 +3082,8 @@ class SecondBrain {
                 await this.initializeTasks();
             } else if (this.currentModule === 'goals') {
                 await this.initializeGoals();
+            } else if (this.currentModule === 'analytics') {
+                await this.initializeAnalytics();
             }
             
             // Update auth status
@@ -3071,6 +3360,12 @@ class SecondBrain {
         this.goals.updateStats();
         this.setupGoalsEventListeners();
         console.log('✅ Goals module initialized successfully');
+    }
+
+    async initializeAnalytics() {
+        console.log('🔄 Initializing Analytics module...');
+        this.analytics = new AnalyticsManager(this.firebase);
+        console.log('✅ Analytics module initialized successfully');
     }
 
     setupTasksEventListeners() {
@@ -5752,6 +6047,7 @@ class Calendar {
 
             // Add click event
             dayElement.addEventListener('click', () => {
+                console.log('📅 Calendar: Day clicked:', dayDate);
                 this.selectDate(dayDate);
                 this.showHabitsForDate(dayDate);
             });
@@ -5796,13 +6092,20 @@ class Calendar {
     }
 
     showHabitsForDate(date) {
-        if (!this.habitTracker) return;
+        console.log('📅 Calendar: showHabitsForDate called for date:', date);
+        
+        if (!this.habitTracker) {
+            console.error('❌ Calendar: No habit tracker available');
+            return;
+        }
         
         const modal = document.getElementById('habitModal');
         if (!modal) {
+            console.log('📅 Calendar: Creating habit modal...');
             this.createHabitModal();
         }
         
+        console.log('📅 Calendar: Calling habitTracker.showHabitsForDate...');
         this.habitTracker.showHabitsForDate(date);
     }
 
@@ -5945,6 +6248,11 @@ class HabitTracker {
                 // Fallback to local storage
                 localStorage.setItem(this.storageKey, JSON.stringify(this.habits));
                 console.log('🎯 Habits saved to local storage:', this.habits.length);
+            }
+            
+            // Refresh dashboard widgets that depend on habits data
+            if (window.refreshDashboardWidgets) {
+                window.refreshDashboardWidgets('habits-streak');
             }
         } catch (error) {
             console.error('Error saving habits:', error);
@@ -6136,13 +6444,25 @@ class HabitTracker {
     }
 
     showHabitsForDate(date) {
+        console.log('🎯 HabitTracker: showHabitsForDate called for date:', date);
+        
         const modal = document.getElementById('habitModal');
         const modalDate = document.getElementById('habitModalDate');
         const modalProgressFill = document.getElementById('habitModalProgressFill');
         const modalProgressText = document.getElementById('habitModalProgressText');
         const modalList = document.getElementById('habitModalList');
+        
+        if (!modal) {
+            console.error('❌ HabitTracker: Modal not found');
+            return;
+        }
+        
+        console.log('🎯 HabitTracker: Modal found, showing habits...');
 
-        if (!modal || !modalDate || !modalProgressFill || !modalProgressText || !modalList) return;
+        if (!modalDate || !modalProgressFill || !modalProgressText || !modalList) {
+            console.error('❌ HabitTracker: Modal elements not found');
+            return;
+        }
 
         // Update modal date
         const dateOptions = { 
@@ -7793,6 +8113,14 @@ class CrmManager {
             
             // Invalidate cache after saving
             this.invalidateCache();
+            
+            // Refresh dashboard widgets that depend on CRM data
+            if (window.refreshDashboardWidgets) {
+                window.refreshDashboardWidgets('crm-projects');
+                window.refreshDashboardWidgets('crm-revenue');
+                window.refreshDashboardWidgets('tasks-today');
+                window.refreshDashboardWidgets('tasks-overdue');
+            }
         } catch (error) {
             console.error('Error saving CRM projects:', error);
             // Fallback to local storage
@@ -9893,6 +10221,755 @@ class ProductivityCalendar {
 }
 
 // ========================================
+// ANALYTICS MANAGER
+// ========================================
+
+class AnalyticsManager {
+    constructor(firebaseService) {
+        this.firebase = firebaseService;
+        this.charts = {};
+        this.data = {};
+        this.timeRange = 30; // days
+        this.init();
+    }
+
+    async init() {
+        console.log('AnalyticsManager initialized');
+        this.setupEventListeners();
+        await this.loadAllData();
+        this.renderCharts();
+    }
+
+    setupEventListeners() {
+        // Time range selector
+        document.addEventListener('change', (e) => {
+            if (e.target.id === 'analyticsTimeRange') {
+                this.timeRange = parseInt(e.target.value);
+                this.refreshAnalytics();
+            }
+        });
+
+        // Chart control buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('chart-btn')) {
+                const chartType = e.target.dataset.chart;
+                const parent = e.target.parentElement;
+                
+                // Update active button
+                parent.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // Update chart based on type
+                this.updateChartByType(chartType);
+            }
+        });
+
+        // Export button
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'exportAnalyticsBtn' || e.target.closest('#exportAnalyticsBtn')) {
+                this.exportAnalyticsData();
+            }
+        });
+    }
+
+    async loadAllData() {
+        try {
+            console.log('📊 Loading analytics data...');
+            
+            // Load data from all modules
+            this.data = {
+                notes: await this.loadNotesData(),
+                tasks: await this.loadTasksData(),
+                goals: await this.loadGoalsData(),
+                habits: await this.loadHabitsData(),
+                wallet: await this.loadWalletData(),
+                crm: await this.loadCrmData(),
+                pomodoro: await this.loadPomodoroData(),
+                bookmarks: await this.loadBookmarksData()
+            };
+
+            console.log('✅ Analytics data loaded:', this.data);
+            this.updateMetrics();
+            this.generateInsights();
+        } catch (error) {
+            console.error('❌ Error loading analytics data:', error);
+        }
+    }
+
+    async loadNotesData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const notes = await this.firebase.getCollection('notes');
+                return notes || [];
+            } else {
+                const notes = JSON.parse(localStorage.getItem('notes') || '[]');
+                return notes;
+            }
+        } catch (error) {
+            console.error('Error loading notes data:', error);
+            return [];
+        }
+    }
+
+    async loadTasksData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const projects = await this.firebase.getCollection('projects');
+                const completedTasks = await this.firebase.getCollection('completed_tasks');
+                
+                let allTasks = [];
+                if (projects) {
+                    projects.forEach(project => {
+                        if (project.tasks) {
+                            allTasks = allTasks.concat(project.tasks.map(task => ({
+                                ...task,
+                                projectName: project.name,
+                                projectId: project.id
+                            })));
+                        }
+                    });
+                }
+                
+                return {
+                    all: allTasks,
+                    completed: completedTasks || []
+                };
+            } else {
+                const crmData = JSON.parse(localStorage.getItem('crm_data') || '[]');
+                const completedTasks = JSON.parse(localStorage.getItem('completed_tasks') || '[]');
+                
+                let allTasks = [];
+                crmData.forEach(project => {
+                    if (project.tasks) {
+                        allTasks = allTasks.concat(project.tasks.map(task => ({
+                            ...task,
+                            projectName: project.name,
+                            projectId: project.id
+                        })));
+                    }
+                });
+                
+                return {
+                    all: allTasks,
+                    completed: completedTasks
+                };
+            }
+        } catch (error) {
+            console.error('Error loading tasks data:', error);
+            return { all: [], completed: [] };
+        }
+    }
+
+    async loadGoalsData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const goals = await this.firebase.getCollection('goals');
+                return goals || [];
+            } else {
+                const goals = JSON.parse(localStorage.getItem('goals_data') || '[]');
+                return goals;
+            }
+        } catch (error) {
+            console.error('Error loading goals data:', error);
+            return [];
+        }
+    }
+
+    async loadHabitsData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const habits = await this.firebase.getCollection('habits');
+                return habits || [];
+            } else {
+                const habits = JSON.parse(localStorage.getItem('habits_data') || '[]');
+                return habits;
+            }
+        } catch (error) {
+            console.error('Error loading habits data:', error);
+            return [];
+        }
+    }
+
+    async loadWalletData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const transactions = await this.firebase.getCollection('wallet_transactions');
+                return transactions || [];
+            } else {
+                const transactions = JSON.parse(localStorage.getItem('wallet_data') || '[]');
+                return transactions;
+            }
+        } catch (error) {
+            console.error('Error loading wallet data:', error);
+            return [];
+        }
+    }
+
+    async loadCrmData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const projects = await this.firebase.getCollection('projects');
+                return projects || [];
+            } else {
+                const projects = JSON.parse(localStorage.getItem('crm_data') || '[]');
+                return projects;
+            }
+        } catch (error) {
+            console.error('Error loading CRM data:', error);
+            return [];
+        }
+    }
+
+    async loadPomodoroData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const sessions = await this.firebase.getCollection('pomodoro_sessions');
+                return sessions || [];
+            } else {
+                const sessions = JSON.parse(localStorage.getItem('pomodoro_sessions') || '[]');
+                return sessions;
+            }
+        } catch (error) {
+            console.error('Error loading pomodoro data:', error);
+            return [];
+        }
+    }
+
+    async loadBookmarksData() {
+        try {
+            if (this.firebase && this.firebase.isInitialized) {
+                const bookmarks = await this.firebase.getCollection('bookmarks');
+                return bookmarks || [];
+            } else {
+                const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '[]');
+                return bookmarks;
+            }
+        } catch (error) {
+            console.error('Error loading bookmarks data:', error);
+            return [];
+        }
+    }
+
+    updateMetrics() {
+        // Update key metrics
+        const totalNotes = this.data.notes.length;
+        const completedTasks = this.data.tasks.completed.length;
+        const activeGoals = this.data.goals.filter(goal => !goal.completed).length;
+        
+        // Calculate total revenue
+        const totalRevenue = this.data.tasks.completed.reduce((sum, task) => {
+            return sum + (task.price || 0);
+        }, 0);
+
+        // Calculate best habit streak
+        const bestHabitStreak = this.data.habits.reduce((max, habit) => {
+            const streak = habit.streak || 0;
+            return Math.max(max, streak);
+        }, 0);
+
+        // Calculate total focus time
+        const totalFocusTime = this.data.pomodoro.reduce((sum, session) => {
+            if (session.type === 'focus') {
+                return sum + (session.duration || 0);
+            }
+            return sum;
+        }, 0);
+
+        // Update DOM elements
+        this.updateElement('totalNotes', totalNotes);
+        this.updateElement('completedTasks', completedTasks);
+        this.updateElement('activeGoals', activeGoals);
+        this.updateElement('totalRevenue', `₹${totalRevenue.toLocaleString()}`);
+        this.updateElement('habitStreak', bestHabitStreak);
+        this.updateElement('focusTime', `${Math.round(totalFocusTime / 3600)}h`);
+    }
+
+    updateElement(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    renderCharts() {
+        // Wait for DOM to be ready
+        setTimeout(() => {
+            this.renderTaskCompletionChart();
+            this.renderGoalProgressChart();
+            this.renderRevenueChart();
+            this.renderHabitChart();
+            this.renderProductivityHeatmap();
+            this.renderModuleUsageChart();
+            this.renderTimeDistributionChart();
+        }, 100);
+    }
+
+    renderTaskCompletionChart() {
+        const ctx = document.getElementById('taskCompletionChart');
+        if (!ctx) return;
+
+        const completedTasks = this.data.tasks.completed;
+        const last30Days = this.getLastNDays(30);
+        
+        const dailyCompletions = last30Days.map(date => {
+            return completedTasks.filter(task => {
+                const taskDate = new Date(task.completedAt || task.createdAt);
+                return taskDate.toDateString() === date.toDateString();
+            }).length;
+        });
+
+        this.charts.taskCompletion = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: last30Days.map(date => date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })),
+                datasets: [{
+                    label: 'Tasks Completed',
+                    data: dailyCompletions,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    renderGoalProgressChart() {
+        const ctx = document.getElementById('goalProgressChart');
+        if (!ctx) return;
+
+        const goals = this.data.goals;
+        const completedGoals = goals.filter(goal => goal.completed);
+        const inProgressGoals = goals.filter(goal => !goal.completed && goal.currentAmount > 0);
+        const notStartedGoals = goals.filter(goal => !goal.completed && goal.currentAmount === 0);
+
+        this.charts.goalProgress = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'In Progress', 'Not Started'],
+                datasets: [{
+                    data: [completedGoals.length, inProgressGoals.length, notStartedGoals.length],
+                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    renderRevenueChart() {
+        const ctx = document.getElementById('revenueChart');
+        if (!ctx) return;
+
+        const completedTasks = this.data.tasks.completed;
+        const last12Months = this.getLastNMonths(12);
+        
+        const monthlyRevenue = last12Months.map(month => {
+            return completedTasks.filter(task => {
+                const taskDate = new Date(task.completedAt || task.createdAt);
+                return taskDate.getMonth() === month.getMonth() && 
+                       taskDate.getFullYear() === month.getFullYear();
+            }).reduce((sum, task) => sum + (task.price || 0), 0);
+        });
+
+        this.charts.revenue = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: last12Months.map(month => month.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })),
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: monthlyRevenue,
+                    backgroundColor: '#10b981',
+                    borderColor: '#059669',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '₹' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    renderHabitChart() {
+        const ctx = document.getElementById('habitChart');
+        if (!ctx) return;
+
+        const habits = this.data.habits;
+        const habitNames = habits.map(habit => habit.name);
+        const habitStreaks = habits.map(habit => habit.streak || 0);
+
+        this.charts.habits = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: habitNames,
+                datasets: [{
+                    label: 'Current Streak',
+                    data: habitStreaks,
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#d97706',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    renderProductivityHeatmap() {
+        const ctx = document.getElementById('productivityHeatmap');
+        if (!ctx) return;
+
+        // Create a simple productivity heatmap
+        const last30Days = this.getLastNDays(30);
+        const completedTasks = this.data.tasks.completed;
+        
+        const productivityData = last30Days.map(date => {
+            const dayTasks = completedTasks.filter(task => {
+                const taskDate = new Date(task.completedAt || task.createdAt);
+                return taskDate.toDateString() === date.toDateString();
+            }).length;
+            
+            return {
+                x: date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+                y: dayTasks
+            };
+        });
+
+        this.charts.productivity = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: 'Daily Productivity',
+                    data: productivityData,
+                    backgroundColor: function(context) {
+                        const value = context.parsed.y;
+                        const alpha = Math.min(value / 10, 1);
+                        return `rgba(79, 70, 229, ${alpha})`;
+                    },
+                    borderColor: '#4f46e5',
+                    borderWidth: 1,
+                    pointRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Date'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Tasks Completed'
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    renderModuleUsageChart() {
+        const ctx = document.getElementById('moduleUsageChart');
+        if (!ctx) return;
+
+        const moduleData = {
+            'Notes': this.data.notes.length,
+            'Tasks': this.data.tasks.all.length,
+            'Goals': this.data.goals.length,
+            'Habits': this.data.habits.length,
+            'Bookmarks': this.data.bookmarks.length,
+            'Projects': this.data.crm.length
+        };
+
+        this.charts.moduleUsage = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(moduleData),
+                datasets: [{
+                    data: Object.values(moduleData),
+                    backgroundColor: [
+                        '#4f46e5', '#10b981', '#f59e0b', 
+                        '#ef4444', '#8b5cf6', '#06b6d4'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    renderTimeDistributionChart() {
+        const ctx = document.getElementById('timeDistributionChart');
+        if (!ctx) return;
+
+        const pomodoroSessions = this.data.pomodoro;
+        const focusTime = pomodoroSessions.filter(s => s.type === 'focus').reduce((sum, s) => sum + (s.duration || 0), 0);
+        const breakTime = pomodoroSessions.filter(s => s.type === 'break').reduce((sum, s) => sum + (s.duration || 0), 0);
+        
+        // Estimate other time based on completed tasks
+        const estimatedWorkTime = this.data.tasks.completed.length * 30 * 60; // 30 minutes per task
+
+        this.charts.timeDistribution = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Focus Time', 'Break Time', 'Estimated Work Time'],
+                datasets: [{
+                    data: [focusTime, breakTime, estimatedWorkTime],
+                    backgroundColor: ['#4f46e5', '#10b981', '#f59e0b'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    generateInsights() {
+        const insights = [];
+        const recommendations = [];
+
+        // Generate insights based on data
+        const totalTasks = this.data.tasks.all.length;
+        const completedTasks = this.data.tasks.completed.length;
+        const completionRate = totalTasks > 0 ? (completedTasks / totalTasks * 100).toFixed(1) : 0;
+
+        if (completionRate > 80) {
+            insights.push({
+                icon: '🎉',
+                text: `Excellent task completion rate of ${completionRate}%!`
+            });
+        } else if (completionRate > 60) {
+            insights.push({
+                icon: '👍',
+                text: `Good task completion rate of ${completionRate}%`
+            });
+        } else {
+            insights.push({
+                icon: '📈',
+                text: `Task completion rate is ${completionRate}% - room for improvement`
+            });
+            recommendations.push({
+                icon: '💡',
+                text: 'Try breaking down large tasks into smaller, manageable chunks'
+            });
+        }
+
+        // Goal insights
+        const activeGoals = this.data.goals.filter(g => !g.completed).length;
+        const completedGoals = this.data.goals.filter(g => g.completed).length;
+        
+        if (completedGoals > 0) {
+            insights.push({
+                icon: '🎯',
+                text: `You've completed ${completedGoals} goal${completedGoals > 1 ? 's' : ''}!`
+            });
+        }
+
+        if (activeGoals > 5) {
+            recommendations.push({
+                icon: '💡',
+                text: 'Consider focusing on fewer goals at once for better results'
+            });
+        }
+
+        // Habit insights
+        const bestStreak = Math.max(...this.data.habits.map(h => h.streak || 0));
+        if (bestStreak > 30) {
+            insights.push({
+                icon: '🔥',
+                text: `Amazing habit streak of ${bestStreak} days!`
+            });
+        }
+
+        // Revenue insights
+        const totalRevenue = this.data.tasks.completed.reduce((sum, task) => sum + (task.price || 0), 0);
+        if (totalRevenue > 0) {
+            insights.push({
+                icon: '💰',
+                text: `Total revenue generated: ₹${totalRevenue.toLocaleString()}`
+            });
+        }
+
+        // Render insights
+        this.renderInsights(insights, recommendations);
+    }
+
+    renderInsights(insights, recommendations) {
+        const insightsList = document.getElementById('insightsList');
+        const recommendationsList = document.getElementById('recommendationsList');
+
+        if (insightsList) {
+            insightsList.innerHTML = insights.map(insight => `
+                <div class="insight-item">
+                    <span class="insight-icon">${insight.icon}</span>
+                    <span class="insight-text">${insight.text}</span>
+                </div>
+            `).join('');
+        }
+
+        if (recommendationsList) {
+            recommendationsList.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item">
+                    <span class="recommendation-icon">${rec.icon}</span>
+                    <span class="recommendation-text">${rec.text}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    updateChartByType(chartType) {
+        // Update specific charts based on button clicks
+        switch (chartType) {
+            case 'tasks-weekly':
+            case 'tasks-monthly':
+                this.renderTaskCompletionChart();
+                break;
+            case 'revenue-monthly':
+            case 'revenue-project':
+                this.renderRevenueChart();
+                break;
+            case 'heatmap-tasks':
+            case 'heatmap-focus':
+                this.renderProductivityHeatmap();
+                break;
+        }
+    }
+
+    async refreshAnalytics() {
+        await this.loadAllData();
+        this.renderCharts();
+    }
+
+    exportAnalyticsData() {
+        const exportData = {
+            timestamp: new Date().toISOString(),
+            timeRange: this.timeRange,
+            metrics: {
+                totalNotes: this.data.notes.length,
+                completedTasks: this.data.tasks.completed.length,
+                activeGoals: this.data.goals.filter(g => !g.completed).length,
+                totalRevenue: this.data.tasks.completed.reduce((sum, task) => sum + (task.price || 0), 0)
+            },
+            data: this.data
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics-export-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        showNotification('Analytics data exported successfully!');
+    }
+
+    // Helper methods
+    getLastNDays(n) {
+        const days = [];
+        for (let i = n - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            days.push(date);
+        }
+        return days;
+    }
+
+    getLastNMonths(n) {
+        const months = [];
+        for (let i = n - 1; i >= 0; i--) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            date.setDate(1);
+            months.push(date);
+        }
+        return months;
+    }
+}
+
+// ========================================
 // DASHBOARD WIDGET SYSTEM
 // ========================================
 
@@ -9976,49 +11053,79 @@ class DashboardWidgets {
     }
 
     async addWidget(widgetType) {
-        const widgetId = `widget_${++this.widgetIdCounter}`;
-        
-        // Show loading state
-        const loadingWidget = {
-            id: widgetId,
-            type: widgetType,
-            title: this.getWidgetTitle(widgetType),
-            icon: this.getWidgetIcon(widgetType),
-            data: { loading: true },
-            size: 'medium',
-            position: this.widgets.length
-        };
-
-        this.widgets.push(loadingWidget);
-        this.renderWidget(loadingWidget);
-        this.updateEmptyState();
-        this.saveWidgets();
-
-        // Fetch real data asynchronously
         try {
-            const realData = await this.getWidgetData(widgetType);
+            console.log(`Adding widget: ${widgetType}`);
             
-            // Update the widget with real data
-            const widget = this.widgets.find(w => w.id === widgetId);
-            if (widget) {
+            // Check if widget already exists
+            const existingWidget = this.widgets.find(w => w.type === widgetType);
+            if (existingWidget) {
+                alert('This widget is already added to your dashboard!');
+                return;
+            }
+            
+            // Create new widget
+            const widget = {
+                id: `widget-${++this.widgetIdCounter}`,
+                type: widgetType,
+                title: this.getWidgetTitle(widgetType),
+                icon: this.getWidgetIcon(widgetType),
+                position: this.widgets.length,
+                data: null
+            };
+            
+            // Add to widgets array
+            this.widgets.push(widget);
+            
+            // Load widget data
+            widget.data = { loading: true };
+            await this.renderWidget(widget);
+            
+            // Load actual data
+            try {
+                console.log(`🔍 Loading data for widget: ${widgetType}`);
+                const realData = await this.getWidgetData(widgetType);
+                console.log(`🔍 Widget data loaded:`, realData);
                 widget.data = realData;
-                const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"] .widget-card-content`);
+                
+                // Update the widget content
+                const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
+                if (widgetElement) {
+                    const content = this.renderWidgetContent(widget);
+                    console.log(`🔍 Widget content:`, content);
+                    widgetElement.innerHTML = content;
+                } else {
+                    console.log(`❌ Widget element not found for ${widget.id}`);
+                }
+            } catch (error) {
+                console.error(`❌ Error loading data for widget ${widgetType}:`, error);
+                widget.data = { error: 'Failed to load data' };
+                
+                // Update the widget content with error state
+                const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
                 if (widgetElement) {
                     widgetElement.innerHTML = this.renderWidgetContent(widget);
                 }
-                this.saveWidgets();
             }
+            
+            // Update empty state
+            this.updateEmptyState();
+            
+            // Save widgets to localStorage
+            this.saveWidgets();
+            
+            console.log(`✅ Widget ${widgetType} added successfully`);
+            
         } catch (error) {
-            console.error('Error loading widget data:', error);
-            // Keep the loading state or show error
+            console.error('Error adding widget:', error);
+            alert('Failed to add widget. Please try again.');
         }
     }
 
     getWidgetTitle(widgetType) {
         const titles = {
-            'notes-recent': 'Recent Notes',
+            'notes-recent': 'My Notes',
             'notes-stats': 'Notes Statistics',
-            'tasks-today': "Today's Tasks",
+            'tasks-today': "My Tasks",
             'tasks-overdue': 'Overdue Tasks',
             'tasks-completed': 'Completed Tasks',
             'calendar-mini': 'Mini Calendar',
@@ -10173,6 +11280,8 @@ class DashboardWidgets {
                     return await this.getGoalsProgressData();
                 case 'goals-achievements':
                     return await this.getGoalsAchievementsData();
+                case 'habits-streak':
+                    return await this.getHabitsStreakData();
                 default:
                     // Return placeholder data for widgets not yet implemented
                     return this.getPlaceholderData(widgetType);
@@ -10200,16 +11309,52 @@ class DashboardWidgets {
 
     // Data fetching methods for each widget type
     async getNotesRecentData() {
-        if (!window.secondBrain?.notes) return { notes: [], count: 0 };
+        console.log('🔍 SIMPLE: Getting notes data...');
         
-        const notes = window.secondBrain.notes.notes || [];
-        const recentNotes = notes.slice(0, 3).map(note => ({
+        // Simple approach: just get all notes and show recent ones
+        let allNotes = [];
+        
+        // Try to get notes from localStorage first (simplest approach)
+        const savedNotes = localStorage.getItem('notes');
+        if (savedNotes) {
+            allNotes = JSON.parse(savedNotes);
+            console.log('✅ SIMPLE: Found notes in localStorage:', allNotes.length);
+        }
+        
+        // If no notes in localStorage, try to get from notes module
+        if (allNotes.length === 0 && window.secondBrain?.notes?.notes) {
+            allNotes = window.secondBrain.notes.notes;
+            console.log('✅ SIMPLE: Found notes in module:', allNotes.length);
+        }
+        
+        // If still no notes, create some simple sample data
+        if (allNotes.length === 0) {
+            console.log('🔍 SIMPLE: No notes found, creating sample data...');
+            allNotes = [
+                { id: 1, title: 'Meeting Notes', content: 'Discussed project timeline and next steps...', createdAt: new Date().toISOString() },
+                { id: 2, title: 'App Ideas', content: 'New feature ideas for the mobile app...', createdAt: new Date().toISOString() },
+                { id: 3, title: 'Shopping List', content: 'Milk, bread, eggs, and vegetables...', createdAt: new Date().toISOString() }
+            ];
+            console.log('✅ SIMPLE: Created sample notes:', allNotes);
+        }
+        
+        // Get recent notes (last 3)
+        const recentNotes = allNotes
+            .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+            .slice(0, 3)
+            .map(note => ({
             title: note.title || 'Untitled Note',
-            content: note.content ? note.content.substring(0, 100) + '...' : '',
+                content: note.content ? note.content.substring(0, 50) + '...' : '',
             updatedAt: note.updatedAt || note.createdAt
         }));
         
-        return { notes: recentNotes, count: notes.length };
+        console.log(`✅ SIMPLE: Total notes: ${allNotes.length}, Recent: ${recentNotes.length}`);
+        
+        return { 
+            notes: recentNotes, 
+            count: allNotes.length,
+            message: `Showing ${recentNotes.length} recent notes`
+        };
     }
 
     async getNotesStatsData() {
@@ -10230,50 +11375,179 @@ class DashboardWidgets {
     }
 
     async getTasksTodayData() {
-        if (!window.secondBrain?.crm) return { tasks: [], completed: 0, total: 0 };
+        console.log('🔍 SIMPLE: Getting tasks data...');
         
-        const projects = window.secondBrain.crm.projects || [];
-        const today = new Date().toISOString().split('T')[0];
-        
+        // Simple approach: just get all tasks and show them
         let allTasks = [];
-        projects.forEach(project => {
-            if (project.tasks) {
-                project.tasks.forEach(task => {
-                    if (task.deadline === today) {
-                        allTasks.push({
-                            ...task,
-                            projectName: project.name
-                        });
-                    }
-                });
-            }
-        });
         
+        // Try to get tasks from localStorage first (simplest approach)
+        const savedTasks = localStorage.getItem('tasks');
+        if (savedTasks) {
+            allTasks = JSON.parse(savedTasks);
+            console.log('✅ SIMPLE: Found tasks in localStorage:', allTasks.length);
+        }
+        
+        // If no tasks in localStorage, try to get from tasks module
+        if (allTasks.length === 0 && window.secondBrain?.tasks?.tasks) {
+            allTasks = window.secondBrain.tasks.tasks;
+            console.log('✅ SIMPLE: Found tasks in module:', allTasks.length);
+        }
+        
+        // If still no tasks, create some simple sample data
+        if (allTasks.length === 0) {
+            console.log('🔍 SIMPLE: No tasks found, creating sample data...');
+            allTasks = [
+                { id: 1, title: 'Sample Task 1', completed: false, dueDate: new Date().toISOString().split('T')[0] },
+                { id: 2, title: 'Sample Task 2', completed: true, dueDate: new Date().toISOString().split('T')[0] },
+                { id: 3, title: 'Sample Task 3', completed: false, dueDate: new Date().toISOString().split('T')[0] }
+            ];
+            console.log('✅ SIMPLE: Created sample tasks:', allTasks);
+        }
+        
+        // Simple calculation
         const completed = allTasks.filter(task => task.completed).length;
         const total = allTasks.length;
         
-        return { tasks: allTasks, completed, total };
+        console.log(`✅ SIMPLE: Total tasks: ${total}, Completed: ${completed}`);
+        
+        return { 
+            tasks: allTasks, 
+            completed: completed, 
+            total: total,
+            message: `Showing ${total} tasks (${completed} completed)`
+        };
+    }
+    
+    async createSampleTasks() {
+        if (!window.secondBrain?.tasks) return;
+        
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        const sampleTasks = [
+            {
+                id: 1,
+                title: 'Complete project report',
+                description: 'Finish the quarterly project report',
+                priority: 'high',
+                dueDate: today,
+                completed: false,
+                userId: 'demo_user',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                id: 2,
+                title: 'Team meeting at 2 PM',
+                description: 'Weekly team standup meeting',
+                priority: 'medium',
+                dueDate: today,
+                completed: true,
+                userId: 'demo_user',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                id: 3,
+                title: 'Review code changes',
+                description: 'Review pull requests from team members',
+                priority: 'medium',
+                dueDate: today,
+                completed: false,
+                userId: 'demo_user',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            },
+            {
+                id: 4,
+                title: 'Update documentation',
+                description: 'Update API documentation',
+                priority: 'low',
+                dueDate: tomorrowStr,
+                completed: false,
+                userId: 'demo_user',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }
+        ];
+        
+        // Add sample tasks to the tasks module
+        window.secondBrain.tasks.tasks = sampleTasks;
+        window.secondBrain.tasks.nextTaskId = 5;
+        
+        // Save to localStorage
+        localStorage.setItem('tasks', JSON.stringify(sampleTasks));
+        localStorage.setItem('tasks_next_id', '5');
+        
+        console.log('✅ Sample tasks created:', sampleTasks);
+    }
+    
+    async createTaskForToday(title, description = '', priority = 'medium') {
+        if (!window.secondBrain?.tasks) {
+            console.log('❌ Tasks module not available for creating task');
+            return false;
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        try {
+            await window.secondBrain.tasks.addTask(title, description, priority, today);
+            console.log('✅ Task created for today:', title);
+            
+            // Refresh the widget
+            setTimeout(() => {
+                this.refreshWidget('tasks-today');
+            }, 500);
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to create task for today:', error);
+            return false;
+        }
     }
 
     async getTasksOverdueData() {
-        if (!window.secondBrain?.crm) return { tasks: [], count: 0 };
-        
-        const projects = window.secondBrain.crm.projects || [];
-        const today = new Date().toISOString().split('T')[0];
-        
-        let overdueTasks = [];
-        projects.forEach(project => {
-            if (project.tasks) {
-                project.tasks.forEach(task => {
-                    if (task.deadline && task.deadline < today && !task.completed) {
-                        overdueTasks.push({
-                            ...task,
-                            projectName: project.name
-                        });
-                    }
-                });
+        // Check if tasks module is available, if not, try to initialize it
+        if (!window.secondBrain?.tasks) {
+            console.log('🔍 Tasks module not available for overdue data, trying to initialize...');
+            try {
+                await window.secondBrain.initializeTasks();
+                console.log('✅ Tasks module initialized successfully for overdue data');
+            } catch (error) {
+                console.log('❌ Failed to initialize tasks module for overdue data:', error);
+                return { tasks: [], count: 0 };
             }
+        }
+        
+        // Check again after initialization
+        if (!window.secondBrain?.tasks) {
+            console.log('❌ Tasks module still not available after initialization for overdue data');
+            return { tasks: [], count: 0 };
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        let allTasks = window.secondBrain.tasks.tasks || [];
+        
+        // If no tasks found, try to load from localStorage directly
+        if (allTasks.length === 0) {
+            console.log('🔍 No tasks in module for overdue, checking localStorage...');
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                allTasks = JSON.parse(savedTasks);
+                console.log('🔍 Tasks loaded from localStorage for overdue:', allTasks);
+            }
+        }
+        
+        // Filter overdue tasks
+        const overdueTasks = allTasks.filter(task => {
+            if (!task.dueDate || task.completed) return false;
+            const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
+            return taskDate < today;
         });
+        
+        console.log(`✅ Overdue tasks: ${overdueTasks.length} found`);
         
         return { tasks: overdueTasks, count: overdueTasks.length };
     }
@@ -10292,16 +11566,50 @@ class DashboardWidgets {
     }
 
     async getWalletBalanceData() {
-        if (!window.secondBrain?.wallet) return { balance: 0, currency: '₹', transactions: [] };
+        console.log('🔍 SIMPLE: Getting wallet data...');
         
-        const transactions = window.secondBrain.wallet.transactions || [];
-        const balance = transactions.reduce((sum, transaction) => {
-            return sum + (transaction.type === 'income' ? transaction.amount : -transaction.amount);
+        // Simple approach: just get wallet data
+        let allTransactions = [];
+        
+        // Try to get transactions from localStorage first (simplest approach)
+        const savedTransactions = localStorage.getItem('wallet_transactions');
+        if (savedTransactions) {
+            allTransactions = JSON.parse(savedTransactions);
+            console.log('✅ SIMPLE: Found transactions in localStorage:', allTransactions.length);
+        }
+        
+        // If no transactions in localStorage, try to get from wallet module
+        if (allTransactions.length === 0 && window.secondBrain?.wallet?.transactions) {
+            allTransactions = window.secondBrain.wallet.transactions;
+            console.log('✅ SIMPLE: Found transactions in module:', allTransactions.length);
+        }
+        
+        // If still no transactions, create some simple sample data
+        if (allTransactions.length === 0) {
+            console.log('🔍 SIMPLE: No transactions found, creating sample data...');
+            allTransactions = [
+                { id: 1, type: 'income', amount: 5000, description: 'Freelance Payment', date: new Date().toISOString() },
+                { id: 2, type: 'expense', amount: 1200, description: 'Grocery Shopping', date: new Date().toISOString() },
+                { id: 3, type: 'income', amount: 3000, description: 'Project Payment', date: new Date().toISOString() }
+            ];
+            console.log('✅ SIMPLE: Created sample transactions:', allTransactions);
+        }
+        
+        // Calculate balance
+        const balance = allTransactions.reduce((total, transaction) => {
+            return total + (transaction.type === 'income' ? transaction.amount : -transaction.amount);
         }, 0);
         
-        const recentTransactions = transactions.slice(0, 3);
+        const recentTransactions = allTransactions.slice(0, 3);
         
-        return { balance, currency: '₹', transactions: recentTransactions };
+        console.log(`✅ SIMPLE: Balance: ₹${balance}, Recent transactions: ${recentTransactions.length}`);
+        
+        return { 
+            balance, 
+            currency: '₹', 
+            transactions: recentTransactions,
+            message: `Balance: ₹${balance.toLocaleString()}`
+        };
     }
 
     async getWalletTransactionsData() {
@@ -10426,6 +11734,16 @@ class DashboardWidgets {
         return { achievements, count: achievements.length };
     }
 
+    async getHabitsStreakData() {
+        if (!window.secondBrain?.habits) return { habits: [], totalStreaks: 0 };
+        
+        const habits = window.secondBrain.habits.habits || [];
+        const totalStreaks = habits.length > 0 ? 
+            Math.max(...habits.map(habit => habit.streak || 0)) : 0;
+        
+        return { habits, totalStreaks };
+    }
+
     renderWidget(widget) {
         const widgetGrid = document.getElementById('widgetGrid');
         if (!widgetGrid) return;
@@ -10503,6 +11821,16 @@ class DashboardWidgets {
             `;
         }
 
+        // Show error state
+        if (widget.data && widget.data.error) {
+            return `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px; color: var(--color-gray-600); text-align: center;">
+                    <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚠️</div>
+                    <div style="font-size: 0.875rem;">${widget.data.error}</div>
+                </div>
+            `;
+        }
+
         switch (widget.type) {
             case 'notes-recent':
                 return this.renderNotesRecentWidget(widget.data);
@@ -10554,15 +11882,43 @@ class DashboardWidgets {
     }
 
     renderNotesRecentWidget(data) {
-        if (data.notes.length === 0) {
-            return '<p style="text-align: center; color: var(--color-gray-600);">No recent notes</p>';
+        console.log('🔍 SIMPLE: Rendering notes widget with data:', data);
+        
+        if (!data || data.notes.length === 0) {
+            return `
+                <div style="text-align: center; padding: 1rem; color: var(--color-gray-600);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                    <div style="font-size: 0.875rem;">No notes found</div>
+                    <div style="font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-gray-500);">Click below to add notes</div>
+                    <button onclick="window.secondBrain.loadModule('notes')" style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: var(--color-primary); color: var(--color-bg-primary); border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                        Go to Notes
+                    </button>
+                </div>
+            `;
         }
-        return data.notes.slice(0, 3).map(note => `
-            <div style="padding: 0.5rem 0; border-bottom: 1px solid var(--color-gray-200);">
-                <div style="font-weight: 500; margin-bottom: 0.25rem;">${note.title}</div>
-                <div style="font-size: 0.875rem; color: var(--color-gray-600);">${note.preview}</div>
+        
+        return `
+            <div style="padding: 1rem;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--color-text-primary);">${data.count}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary);">Total Notes</div>
+                </div>
+                
+                <div style="font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 1rem;">
+                    ${data.message || `${data.notes.length} recent notes`}
+                </div>
+                
+                <div style="font-size: 0.7rem; color: #888;">
+                    <div style="font-weight: bold; margin-bottom: 0.5rem;">Recent Notes:</div>
+                    ${data.notes.map(note => `
+                        <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; border-left: 3px solid #000000;">
+                            <div style="font-weight: bold; color: #000000; margin-bottom: 0.25rem;">📄 ${note.title}</div>
+                            <div style="color: #525252; line-height: 1.3;">${note.content}</div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
-        `).join('');
+        `;
     }
 
     renderNotesStatsWidget(data) {
@@ -10585,18 +11941,49 @@ class DashboardWidgets {
     }
 
     renderTasksTodayWidget(data) {
+        console.log('🔍 SIMPLE: Rendering widget with data:', data);
+        
+        if (!data || data.total === 0) {
+            return `
+                <div style="text-align: center; padding: 1rem; color: var(--color-gray-600);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                    <div style="font-size: 0.875rem;">No tasks found</div>
+                    <div style="font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-gray-500);">Click below to add tasks</div>
+                    <button onclick="window.secondBrain.loadModule('tasks')" style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: var(--color-primary); color: var(--color-bg-primary); border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                        Go to Tasks
+                    </button>
+                </div>
+            `;
+        }
+        
         const progress = data.total > 0 ? (data.completed / data.total) * 100 : 0;
+        
         return `
-            <div style="margin-bottom: 1rem;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                    <span>Progress</span>
-                    <span>${data.completed}/${data.total}</span>
+            <div style="padding: 1rem;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--color-text-primary);">${data.completed}/${data.total}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary);">Tasks Completed</div>
                 </div>
-                <div style="background-color: var(--color-gray-200); height: 8px; border-radius: 4px; overflow: hidden;">
-                    <div style="background: linear-gradient(135deg, var(--color-gray-400) 0%, var(--color-gray-500) 100%); height: 100%; width: ${progress}%; transition: width 0.3s ease;"></div>
+                
+                <div style="background-color: var(--color-gray-200); height: 8px; border-radius: 4px; margin-bottom: 1rem;">
+                    <div style="background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-gray-700) 100%); height: 100%; width: ${progress}%; border-radius: 4px; transition: width 0.3s ease;"></div>
                 </div>
+                
+                <div style="font-size: 0.75rem; color: var(--color-text-secondary); text-align: center;">
+                    ${data.message || `${data.total} total tasks`}
+                </div>
+                
+                ${data.tasks && data.tasks.length > 0 ? `
+                    <div style="margin-top: 0.75rem; font-size: 0.7rem; color: #888;">
+                        <div style="font-weight: bold; margin-bottom: 0.25rem;">Recent Tasks:</div>
+                        ${data.tasks.slice(0, 3).map(task => `
+                            <div style="margin-bottom: 0.25rem; ${task.completed ? 'text-decoration: line-through; color: #999;' : ''}">
+                                ${task.completed ? '✅' : '⏳'} ${task.title}
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
-            <p style="text-align: center; color: var(--color-gray-600); font-size: 0.875rem;">${data.tasks.length} tasks due today</p>
         `;
     }
 
@@ -10677,15 +12064,51 @@ class DashboardWidgets {
     // ========================================
 
     renderWalletBalanceWidget(data) {
-        return `
-            <div style="text-align: center;">
-                <div style="font-size: 2.5rem; font-weight: 700; color: var(--color-black); margin-bottom: 0.5rem;">
-                    ${data.currency}${data.balance.toLocaleString()}
+        console.log('🔍 SIMPLE: Rendering wallet widget with data:', data);
+        
+        if (!data || data.balance === undefined) {
+            return `
+                <div style="text-align: center; padding: 1rem; color: var(--color-gray-600);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">💰</div>
+                    <div style="font-size: 0.875rem;">No wallet data found</div>
+                    <div style="font-size: 0.75rem; margin-top: 0.25rem; color: var(--color-gray-500);">Click below to manage wallet</div>
+                    <button onclick="window.secondBrain.loadModule('wallet')" style="margin-top: 0.75rem; padding: 0.5rem 1rem; background: var(--color-primary); color: var(--color-bg-primary); border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">
+                        Go to Wallet
+                    </button>
                 </div>
-                <div style="color: var(--color-gray-600); margin-bottom: 1rem;">Current Balance</div>
-                <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                    <button style="padding: 0.5rem 1rem; background: var(--color-gray-300); border: none; border-radius: 4px; color: var(--color-black); font-size: 0.875rem; cursor: pointer;">+ Add</button>
-                    <button style="padding: 0.5rem 1rem; background: var(--color-gray-300); border: none; border-radius: 4px; color: var(--color-black); font-size: 0.875rem; cursor: pointer;">- Expense</button>
+            `;
+        }
+        
+        return `
+            <div style="padding: 1rem;">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary);">${data.currency}${data.balance.toLocaleString()}</div>
+                    <div style="font-size: 0.75rem; color: var(--color-text-secondary);">Current Balance</div>
+                </div>
+                
+                <div style="font-size: 0.75rem; color: #666; text-align: center; margin-bottom: 1rem;">
+                    ${data.message || 'Wallet Summary'}
+                </div>
+                
+                ${data.transactions && data.transactions.length > 0 ? `
+                    <div style="font-size: 0.7rem; color: #888;">
+                        <div style="font-weight: bold; margin-bottom: 0.5rem;">Recent Transactions:</div>
+                        ${data.transactions.map(transaction => `
+                            <div style="margin-bottom: 0.5rem; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; border-left: 3px solid ${transaction.type === 'income' ? '#000000' : '#404040'};">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="font-weight: bold; color: #000000;">${transaction.type === 'income' ? '💰' : '💸'} ${transaction.description}</div>
+                                    <div style="color: ${transaction.type === 'income' ? '#000000' : '#404040'}; font-weight: bold;">
+                                        ${transaction.type === 'income' ? '+' : '-'}${data.currency}${transaction.amount}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                
+                <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1rem;">
+                    <button onclick="window.secondBrain.loadModule('wallet')" style="padding: 0.5rem 1rem; background: #000000; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">+ Add Income</button>
+                    <button onclick="window.secondBrain.loadModule('wallet')" style="padding: 0.5rem 1rem; background: #404040; color: white; border: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">- Add Expense</button>
                 </div>
             </div>
         `;
@@ -10995,6 +12418,28 @@ class DashboardWidgets {
         console.log('✅ All widgets refreshed');
     }
 
+    // Method to refresh specific widget type
+    async refreshWidgetType(widgetType) {
+        const widgets = this.widgets.filter(w => w.type === widgetType);
+        
+        for (const widget of widgets) {
+            try {
+                const realData = await this.getWidgetData(widget.type);
+                widget.data = realData;
+                
+                // Update the widget content
+                const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
+                if (widgetElement) {
+                    widgetElement.innerHTML = this.renderWidgetContent(widget);
+                }
+            } catch (error) {
+                console.error(`Error refreshing widget ${widget.type}:`, error);
+            }
+        }
+        
+        this.saveWidgets();
+    }
+
     // ========================================
     // WIDGET RESIZING AND DRAG & DROP
     // ========================================
@@ -11149,38 +12594,11 @@ class DashboardWidgets {
     // Enhanced load method to restore size and position
     async loadWidgets() {
         try {
-            const savedWidgets = localStorage.getItem('dashboard_widgets');
-            if (savedWidgets) {
-                this.widgets = JSON.parse(savedWidgets);
-                // Sort by position
-                this.widgets.sort((a, b) => (a.position || 0) - (b.position || 0));
-                
-                // Render widgets first with loading state
-                this.widgets.forEach(widget => {
-                    widget.data = { loading: true }; // Set loading state
-                    this.renderWidget(widget);
-                });
-                this.updateEmptyState();
-                
-                // Then refresh data for each widget
-                for (const widget of this.widgets) {
-                    try {
-                        const realData = await this.getWidgetData(widget.type);
-                        widget.data = realData;
-                        
-                        // Update the widget content
-                        const widgetElement = document.querySelector(`[data-widget-id="${widget.id}"] .widget-card-content`);
-                        if (widgetElement) {
-                            widgetElement.innerHTML = this.renderWidgetContent(widget);
-                        }
-                    } catch (error) {
-                        console.error(`Error refreshing data for widget ${widget.type}:`, error);
-                        // Keep loading state or show error
-                    }
-                }
-                
-                this.saveWidgets();
-            }
+            // Clear all existing widgets for now
+            this.widgets = [];
+            localStorage.removeItem('dashboard_widgets');
+            this.updateEmptyState();
+            console.log('🧹 Dashboard widgets cleared');
         } catch (error) {
             console.error('Error loading widgets:', error);
         }
@@ -11190,6 +12608,80 @@ class DashboardWidgets {
 // Initialize dashboard widgets when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboardWidgets = new DashboardWidgets();
+});
+
+// Global function to refresh dashboard widgets (can be called by other modules)
+window.refreshDashboardWidgets = async (widgetType = null) => {
+    if (window.dashboardWidgets) {
+        if (widgetType) {
+            await window.dashboardWidgets.refreshWidgetType(widgetType);
+        } else {
+            await window.dashboardWidgets.refreshAllWidgets();
+        }
+    }
+};
+
+// Theme Management System
+class ThemeManager {
+    constructor() {
+        this.currentTheme = localStorage.getItem('theme') || 'light';
+        this.init();
+    }
+    
+    init() {
+        this.applyTheme(this.currentTheme);
+        this.setupEventListeners();
+        this.updateThemeIcon();
+    }
+    
+    setupEventListeners() {
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => this.toggleTheme());
+        }
+    }
+    
+    toggleTheme() {
+        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        this.applyTheme(this.currentTheme);
+        this.updateThemeIcon();
+        localStorage.setItem('theme', this.currentTheme);
+    }
+    
+    applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        this.currentTheme = theme;
+    }
+    
+    updateThemeIcon() {
+        const themeIcon = document.getElementById('themeIcon');
+        if (themeIcon) {
+            if (this.currentTheme === 'light') {
+                // Sun icon for light mode
+                themeIcon.innerHTML = `
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                `;
+            } else {
+                // Moon icon for dark mode
+                themeIcon.innerHTML = `
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                `;
+            }
+        }
+    }
+}
+
+// Initialize theme manager when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.themeManager = new ThemeManager();
 });
 
 // Export for potential module usage

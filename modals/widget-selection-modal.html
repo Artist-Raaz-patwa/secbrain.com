@@ -1,0 +1,184 @@
+<!-- Widget Selection Modal -->
+<div class="widget-selection-modal" id="widgetSelectionModal">
+    <div class="widget-selection-modal-content">
+        <div class="widget-selection-modal-header">
+            <h3 class="widget-selection-modal-title">Add Widget to Dashboard</h3>
+            <button class="widget-selection-modal-close" id="widgetSelectionModalClose">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        <div class="widget-selection-modal-body">
+            <div class="widget-categories">
+                <!-- Notes Widgets -->
+                <div class="widget-category">
+                    <h4 class="widget-category-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14,2 14,8 20,8"></polyline>
+                        </svg>
+                        Notes
+                    </h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget="notes-recent">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14,2 14,8 20,8"></polyline>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Recent Notes</h5>
+                                <p>Show your latest notes with quick access</p>
+                            </div>
+                        </div>
+                        <div class="widget-option" data-widget="notes-stats">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 20V10"></path>
+                                    <path d="M12 20V4"></path>
+                                    <path d="M6 20v-6"></path>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Notes Statistics</h5>
+                                <p>Total notes count and growth metrics</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tasks Widgets -->
+                <div class="widget-category">
+                    <h4 class="widget-category-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 11l3 3l8-8"></path>
+                            <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                        </svg>
+                        Tasks
+                    </h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget="tasks-today">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Today's Tasks</h5>
+                                <p>Tasks due today with progress tracking</p>
+                            </div>
+                        </div>
+                        <div class="widget-option" data-widget="tasks-overdue">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 6v6l4 2"></path>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Overdue Tasks</h5>
+                                <p>Tasks that need immediate attention</p>
+                            </div>
+                        </div>
+                        <div class="widget-option" data-widget="tasks-completed">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 12l2 2 4-4"></path>
+                                    <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Completed Tasks</h5>
+                                <p>Recently completed tasks and productivity</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Widgets -->
+                <div class="widget-category">
+                    <h4 class="widget-category-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        Calendar
+                    </h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget="calendar-mini">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Mini Calendar</h5>
+                                <p>Compact calendar view with events</p>
+                            </div>
+                        </div>
+                        <div class="widget-option" data-widget="calendar-upcoming">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Upcoming Events</h5>
+                                <p>Next few events and appointments</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Access Widgets -->
+                <div class="widget-category">
+                    <h4 class="widget-category-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                        Quick Access
+                    </h4>
+                    <div class="widget-options">
+                        <div class="widget-option" data-widget="quick-notes">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14,2 14,8 20,8"></polyline>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Quick Notes</h5>
+                                <p>Fast note-taking and capture ideas</p>
+                            </div>
+                        </div>
+                        <div class="widget-option" data-widget="time-weather">
+                            <div class="widget-option-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12,6 12,12 16,14"></polyline>
+                                </svg>
+                            </div>
+                            <div class="widget-option-content">
+                                <h5>Time & Weather</h5>
+                                <p>Current time and weather information</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="widget-selection-modal-actions">
+            <button class="btn btn-secondary" id="cancelWidgetSelection">Cancel</button>
+        </div>
+    </div>
+</div>

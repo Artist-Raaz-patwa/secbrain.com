@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Second Brain</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- <script src="js/css-loader.js"></script> -->
     
     <!-- jsPDF Library for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Chart.js Library for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Firebase SDK -->
     <script type="module">
@@ -73,6 +77,19 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"></circle>
                             <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                    <button class="action-btn" id="themeToggleBtn" aria-label="Toggle Theme" title="Switch between light and dark mode">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="themeIcon">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                         </svg>
                     </button>
                     <button class="action-btn" id="settingsBtn" aria-label="Settings">
@@ -522,8 +539,124 @@
             </div>
         </div>
 
-        <!-- Task Completion Modal -->
-        <div class="task-completion-modal" id="taskCompletionModal">
+    <!-- Widget Selection Modal -->
+    <div class="widget-selection-modal" id="widgetSelectionModal">
+        <div class="widget-selection-modal-content">
+            <div class="widget-selection-modal-header">
+                <h3 class="widget-selection-modal-title">Add Widget to Dashboard</h3>
+                <button class="widget-selection-modal-close" id="widgetSelectionModalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="widget-selection-modal-body">
+                <div class="widget-categories">
+                    <!-- Tasks Widgets -->
+                    <div class="widget-category">
+                        <h4 class="widget-category-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 11l3 3l8-8"></path>
+                                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
+                            </svg>
+                            Tasks
+                        </h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget="tasks-today">
+                                <div class="widget-option-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12,6 12,12 16,14"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="widget-option-content">
+                                    <h5>My Tasks</h5>
+                                    <p>All your tasks with progress tracking</p>
+                                </div>
+                            </div>
+                            <div class="widget-option" data-widget="tasks-overdue">
+                                <div class="widget-option-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <path d="M12 6v6l4 2"></path>
+                                    </svg>
+                                </div>
+                                <div class="widget-option-content">
+                                    <h5>Overdue Tasks</h5>
+                                    <p>Tasks that need immediate attention</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Widgets -->
+                    <div class="widget-category">
+                        <h4 class="widget-category-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14,2 14,8 20,8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10,9 9,9 8,9"></polyline>
+                            </svg>
+                            Notes
+                        </h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget="notes-recent">
+                                <div class="widget-option-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14,2 14,8 20,8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10,9 9,9 8,9"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="widget-option-content">
+                                    <h5>My Notes</h5>
+                                    <p>Recent notes with quick preview</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Wallet Widgets -->
+                    <div class="widget-category">
+                        <h4 class="widget-category-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                                <line x1="10" y1="12" x2="14" y2="12"></line>
+                            </svg>
+                            Wallet
+                        </h4>
+                        <div class="widget-options">
+                            <div class="widget-option" data-widget="wallet-balance">
+                                <div class="widget-option-icon">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                                        <line x1="10" y1="12" x2="14" y2="12"></line>
+                                    </svg>
+                                </div>
+                                <div class="widget-option-content">
+                                    <h5>Wallet Balance</h5>
+                                    <p>Current balance and recent transactions</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="widget-selection-modal-actions">
+                <button class="btn btn-secondary" id="cancelWidgetSelection">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Completion Modal -->
+    <div class="task-completion-modal" id="taskCompletionModal">
         <div class="task-completion-modal-content">
             <div class="task-completion-modal-header">
                 <h3 class="task-completion-modal-title">Task Completed!</h3>
@@ -631,428 +764,17 @@
         </div>
     </div>
 
-    <!-- Widget Selection Modal -->
-    <div class="widget-selection-modal" id="widgetSelectionModal">
-        <div class="widget-selection-modal-content">
-            <div class="widget-selection-modal-header">
-                <h3 class="widget-selection-modal-title">Add Widget to Dashboard</h3>
-                <button class="widget-selection-modal-close" id="widgetSelectionModalClose">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-            <div class="widget-selection-modal-body">
-                <div class="widget-categories">
-                    <!-- Notes Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                <polyline points="14,2 14,8 20,8"></polyline>
-                            </svg>
-                            Notes
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="notes-recent">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14,2 14,8 20,8"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Recent Notes</h5>
-                                    <p>Show your latest notes with quick access</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="notes-stats">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M18 20V10"></path>
-                                        <path d="M12 20V4"></path>
-                                        <path d="M6 20v-6"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Notes Statistics</h5>
-                                    <p>Total notes count and growth metrics</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Tasks Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 11l3 3l8-8"></path>
-                                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-                            </svg>
-                            Tasks
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="tasks-today">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12,6 12,12 16,14"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Today's Tasks</h5>
-                                    <p>Tasks due today with progress tracking</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="tasks-overdue">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M12 6v6l4 2"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Overdue Tasks</h5>
-                                    <p>Tasks that need immediate attention</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="tasks-completed">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M9 12l2 2 4-4"></path>
-                                        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Completed Tasks</h5>
-                                    <p>Recently completed tasks and productivity</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Calendar Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                            Calendar
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="calendar-mini">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Mini Calendar</h5>
-                                    <p>Compact calendar view with events</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="calendar-upcoming">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12,6 12,12 16,14"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Upcoming Events</h5>
-                                    <p>Next few events and appointments</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Habits Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 12l2 2 4-4"></path>
-                                <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"></path>
-                            </svg>
-                            Habits
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="habits-streak">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Habit Streaks</h5>
-                                    <p>Track your daily habit streaks</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Wallet Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-                                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-                            </svg>
-                            Wallet
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="wallet-balance">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-                                        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-                                        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Wallet Balance</h5>
-                                    <p>Current balance and quick transaction access</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="wallet-transactions">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14,2 14,8 20,8"></polyline>
-                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Recent Transactions</h5>
-                                    <p>Latest income and expense entries</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="wallet-summary">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M18 20V10"></path>
-                                        <path d="M12 20V4"></path>
-                                        <path d="M6 20v-6"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Income vs Expense</h5>
-                                    <p>Monthly financial overview and trends</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Goals Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                            </svg>
-                            Goals
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="goals-progress">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M12 6v6l4 2"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Goal Progress</h5>
-                                    <p>Track progress towards your active goals</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="goals-achievements">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Recent Achievements</h5>
-                                    <p>Celebrate your completed goals and milestones</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- CRM Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                            </svg>
-                            CRM
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="crm-projects">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Active Projects</h5>
-                                    <p>Current projects and their status</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="crm-revenue">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Revenue Tracker</h5>
-                                    <p>Monthly earnings and client payments</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Productivity Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12,6 12,12 16,14"></polyline>
-                            </svg>
-                            Productivity
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="pomodoro-timer">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12,6 12,12 16,14"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Pomodoro Timer</h5>
-                                    <p>Quick access to focus sessions</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="daily-summary">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M18 20V10"></path>
-                                        <path d="M12 20V4"></path>
-                                        <path d="M6 20v-6"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Daily Summary</h5>
-                                    <p>Today's productivity overview</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="focus-time">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M12 6v6l4 2"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Focus Time</h5>
-                                    <p>Track your deep work sessions</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Access Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
-                            </svg>
-                            Quick Access
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="quick-notes">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                        <polyline points="14,2 14,8 20,8"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Quick Notes</h5>
-                                    <p>Fast note-taking and capture ideas</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="time-weather">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12,6 12,12 16,14"></polyline>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Time & Weather</h5>
-                                    <p>Current time and weather information</p>
-                                </div>
-                            </div>
-                            <div class="widget-option" data-widget="bookmark-shortcuts">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Bookmark Shortcuts</h5>
-                                    <p>Quick access to your favorite bookmarks</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Analytics Widgets -->
-                    <div class="widget-category">
-                        <h4 class="widget-category-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 20V10"></path>
-                                <path d="M12 20V4"></path>
-                                <path d="M6 20v-6"></path>
-                            </svg>
-                            Analytics
-                        </h4>
-                        <div class="widget-options">
-                            <div class="widget-option" data-widget="analytics-productivity">
-                                <div class="widget-option-icon">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M18 20V10"></path>
-                                        <path d="M12 20V4"></path>
-                                        <path d="M6 20v-6"></path>
-                                    </svg>
-                                </div>
-                                <div class="widget-option-content">
-                                    <h5>Productivity Chart</h5>
-                                    <p>Visual productivity trends and insights</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="widget-selection-modal-actions">
-                <button class="btn btn-secondary" id="cancelWidgetSelection">Cancel</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- Main Script First -->
     <script src="script.js"></script>
+    
+    <!-- Optimization Scripts Temporarily Disabled -->
+    <!-- <script src="js/performance-optimizer.js"></script> -->
+    <!-- <script src="js/module-loader.js"></script> -->
+    <!-- <script src="js/firebase-optimizer.js"></script> -->
+    <!-- <script src="js/modal-loader.js"></script> -->
+    <!-- <script src="js/modal-utils.js"></script> -->
+    <!-- <script src="js/debug-navigation.js"></script> -->
+    <!-- <script src="js/navigation-fix.js"></script> -->
 </body>
 </html>
