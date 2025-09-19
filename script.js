@@ -10230,14 +10230,22 @@ class AnalyticsManager {
         this.charts = {};
         this.data = {};
         this.timeRange = 30; // days
+        this.isInitialized = false;
         this.init();
     }
 
     async init() {
-        console.log('AnalyticsManager initialized');
-        this.setupEventListeners();
-        await this.loadAllData();
-        this.renderCharts();
+        try {
+            console.log('🔄 Initializing AnalyticsManager...');
+            this.setupEventListeners();
+            await this.loadAllData();
+            await this.renderCharts();
+            this.isInitialized = true;
+            console.log('✅ AnalyticsManager initialized successfully');
+        } catch (error) {
+            console.error('❌ Error initializing AnalyticsManager:', error);
+            this.showErrorState();
+        }
     }
 
     setupEventListeners() {
@@ -10276,16 +10284,27 @@ class AnalyticsManager {
         try {
             console.log('📊 Loading analytics data...');
             
-            // Load data from all modules
+            // Load data from all modules with individual error handling
+            const [notes, tasks, goals, habits, wallet, crm, pomodoro, bookmarks] = await Promise.allSettled([
+                this.loadNotesData(),
+                this.loadTasksData(),
+                this.loadGoalsData(),
+                this.loadHabitsData(),
+                this.loadWalletData(),
+                this.loadCrmData(),
+                this.loadPomodoroData(),
+                this.loadBookmarksData()
+            ]);
+
             this.data = {
-                notes: await this.loadNotesData(),
-                tasks: await this.loadTasksData(),
-                goals: await this.loadGoalsData(),
-                habits: await this.loadHabitsData(),
-                wallet: await this.loadWalletData(),
-                crm: await this.loadCrmData(),
-                pomodoro: await this.loadPomodoroData(),
-                bookmarks: await this.loadBookmarksData()
+                notes: notes.status === 'fulfilled' ? notes.value : [],
+                tasks: tasks.status === 'fulfilled' ? tasks.value : { all: [], completed: [] },
+                goals: goals.status === 'fulfilled' ? goals.value : [],
+                habits: habits.status === 'fulfilled' ? habits.value : [],
+                wallet: wallet.status === 'fulfilled' ? wallet.value : { transactions: [], balance: 0 },
+                crm: crm.status === 'fulfilled' ? crm.value : { contacts: [], deals: [] },
+                pomodoro: pomodoro.status === 'fulfilled' ? pomodoro.value : { sessions: [], totalTime: 0 },
+                bookmarks: bookmarks.status === 'fulfilled' ? bookmarks.value : []
             };
 
             console.log('✅ Analytics data loaded:', this.data);
@@ -10293,6 +10312,7 @@ class AnalyticsManager {
             this.generateInsights();
         } catch (error) {
             console.error('❌ Error loading analytics data:', error);
+            this.showErrorState();
         }
     }
 
@@ -10491,96 +10511,201 @@ class AnalyticsManager {
         }
     }
 
-    renderCharts() {
-        // Wait for DOM to be ready
-        setTimeout(() => {
-            this.renderTaskCompletionChart();
-            this.renderGoalProgressChart();
-            this.renderRevenueChart();
-            this.renderHabitChart();
-            this.renderProductivityHeatmap();
-            this.renderModuleUsageChart();
-            this.renderTimeDistributionChart();
-        }, 100);
+    async renderCharts() {
+        try {
+            console.log('📊 Rendering analytics charts...');
+            
+            // Wait for DOM to be ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Destroy existing charts to prevent memory leaks
+            this.destroyExistingCharts();
+            
+            // Render all charts with error handling
+            const chartPromises = [
+                this.renderTaskCompletionChart(),
+                this.renderGoalProgressChart(),
+                this.renderRevenueChart(),
+                this.renderHabitChart(),
+                this.renderProductivityHeatmap(),
+                this.renderModuleUsageChart(),
+                this.renderTimeDistributionChart()
+            ];
+            
+            await Promise.allSettled(chartPromises);
+            console.log('✅ Analytics charts rendered successfully');
+        } catch (error) {
+            console.error('❌ Error rendering charts:', error);
+        }
+    }
+
+    destroyExistingCharts() {
+        Object.values(this.charts).forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+                chart.destroy();
+            }
+        });
+        this.charts = {};
     }
 
     renderTaskCompletionChart() {
-        const ctx = document.getElementById('taskCompletionChart');
-        if (!ctx) return;
+        try {
+            const ctx = document.getElementById('taskCompletionChart');
+            if (!ctx) {
+                console.warn('Task completion chart canvas not found');
+                return;
+            }
 
-        const completedTasks = this.data.tasks.completed;
-        const last30Days = this.getLastNDays(30);
-        
-        const dailyCompletions = last30Days.map(date => {
-            return completedTasks.filter(task => {
-                const taskDate = new Date(task.completedAt || task.createdAt);
-                return taskDate.toDateString() === date.toDateString();
-            }).length;
-        });
+            const completedTasks = this.data.tasks?.completed || [];
+            const last30Days = this.getLastNDays(this.timeRange);
+            
+            const dailyCompletions = last30Days.map(date => {
+                return completedTasks.filter(task => {
+                    if (!task.completedAt && !task.createdAt) return false;
+                    const taskDate = new Date(task.completedAt || task.createdAt);
+                    return taskDate.toDateString() === date.toDateString();
+                }).length;
+            });
 
-        this.charts.taskCompletion = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: last30Days.map(date => date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })),
-                datasets: [{
-                    label: 'Tasks Completed',
-                    data: dailyCompletions,
-                    borderColor: '#4f46e5',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+            this.charts.taskCompletion = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last30Days.map(date => date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })),
+                    datasets: [{
+                        label: 'Tasks Completed',
+                        data: dailyCompletions,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#4f46e5',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#4f46e5',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : '';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error rendering task completion chart:', error);
+        }
     }
 
     renderGoalProgressChart() {
-        const ctx = document.getElementById('goalProgressChart');
-        if (!ctx) return;
+        try {
+            const ctx = document.getElementById('goalProgressChart');
+            if (!ctx) {
+                console.warn('Goal progress chart canvas not found');
+                return;
+            }
 
-        const goals = this.data.goals;
-        const completedGoals = goals.filter(goal => goal.completed);
-        const inProgressGoals = goals.filter(goal => !goal.completed && goal.currentAmount > 0);
-        const notStartedGoals = goals.filter(goal => !goal.completed && goal.currentAmount === 0);
+            const goals = this.data.goals || [];
+            const completedGoals = goals.filter(goal => goal.completed);
+            const inProgressGoals = goals.filter(goal => !goal.completed && (goal.currentAmount || 0) > 0);
+            const notStartedGoals = goals.filter(goal => !goal.completed && (goal.currentAmount || 0) === 0);
 
-        this.charts.goalProgress = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Completed', 'In Progress', 'Not Started'],
-                datasets: [{
-                    data: [completedGoals.length, inProgressGoals.length, notStartedGoals.length],
-                    backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
+            const data = [completedGoals.length, inProgressGoals.length, notStartedGoals.length];
+            const hasData = data.some(value => value > 0);
+
+            if (!hasData) {
+                // Show empty state
+                ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+                const context = ctx.getContext('2d');
+                context.font = '16px Arial';
+                context.fillStyle = '#6b7280';
+                context.textAlign = 'center';
+                context.fillText('No goals data available', ctx.width / 2, ctx.height / 2);
+                return;
+            }
+
+            this.charts.goalProgress = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress', 'Not Started'],
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 3,
+                        hoverBorderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#4f46e5',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.parsed} (${percentage}%)`;
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error rendering goal progress chart:', error);
+        }
     }
 
     renderRevenueChart() {
@@ -10966,6 +11091,56 @@ class AnalyticsManager {
             months.push(date);
         }
         return months;
+    }
+
+    showErrorState() {
+        try {
+            const analyticsContainer = document.querySelector('.analytics-container');
+            if (!analyticsContainer) return;
+
+            analyticsContainer.innerHTML = `
+                <div class="analytics-error-state" style="
+                    display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    gap:12px;padding:2rem;border:1px dashed var(--color-border);
+                    border-radius: var(--border-radius);background: var(--color-surface);
+                    color: var(--color-text-secondary)">
+                    <div class="error-icon" aria-hidden="true">
+                        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="7" x2="12" y2="13"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <h3 style="margin:0;color:var(--color-text-primary)">Unable to load Analytics</h3>
+                    <p style="margin:0;text-align:center;max-width:520px">There was a problem loading your analytics data. You can try refreshing the page or adjusting the time range. If the issue persists, your local data may be empty.</p>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <button id="retryAnalyticsBtn" class="analytics-btn" style="display:inline-flex;align-items:center;gap:8px">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"></polyline>
+                                <polyline points="1 20 1 14 7 14"></polyline>
+                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                            </svg>
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // attach retry
+            const retry = document.getElementById('retryAnalyticsBtn');
+            if (retry) {
+                retry.addEventListener('click', async () => {
+                    try {
+                        await this.loadAllData();
+                        await this.renderCharts();
+                    } catch (e) {
+                        console.error('Retry failed:', e);
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Failed to show analytics error state:', err);
+        }
     }
 }
 
